@@ -3,7 +3,9 @@ version: 0.2
 phases:
   install:
     commands:
-      - echo Nothing to do in the install phase...
+      - echo print out CODEBUILD vars...
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - echo $CODEBUILD_SOURCE_VERSION
   pre_build:
     commands:
       - echo run unittests om `date`
