@@ -1,0 +1,20 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo Nothing to do in the install phase...
+  pre_build:
+    commands:
+      - echo run unittests om `date`
+      - python setup.py test
+  build:
+    commands:
+      - echo Build started on `date`
+      - python setup.py sdist
+  post_build:
+    commands:
+      - echo Build completed on `date`
+artifacts:
+  files:
+    - dist/aws-cicd-0.1.0.tar.gz
