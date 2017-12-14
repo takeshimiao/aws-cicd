@@ -1,0 +1,487 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC with public, private subnet, and NAT
+
+Parameters:
+  AvailabilityZone1:
+    Default: us-east-1b
+    Description: First AZ to use for PublicSubnet1/PrivateSubnet1.
+    Type: String
+  AvailabilityZone2:
+    Default: us-east-1c
+    Description: Second AZ to use for PublicSubnet2/PrivateSubnet2.
+    Type: String
+  VPC1Cidr:
+    Default: 192.168.1.0/24
+    Description: CIDR address for the VPC to be created.
+    Type: String
+  VPC1PrivateSubnet1:
+    Default: 192.168.1.0/26
+    Description: Address range for a private subnet to be created in AZ1.
+    Type: String
+  VPC1PrivateSubnet2:
+    Default: 192.168.1.64/26
+    Description: Address range for a private subnet to be created in AZ2.
+    Type: String
+  VPC1PublicSubnet1:
+    Default: 192.168.1.128/26
+    Description: Address range for a public subnet to be created in AZ1.
+    Type: String
+  VPC1PublicSubnet2:
+    Default: 192.168.1.192/26
+    Description: Address range for a public subnet to be created in AZ2.
+    Type: String
+  KeyName:
+    Description: SSH key for EC2
+    Type: String
+    Default: cicd
+Mappings:
+  EcsAmi:
+    us-east-1:
+      AMI: ami-8c1be5f6
+    us-west-2:
+      AMI: ami-e689729e
+Resources:
+  NATGateway1:
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - VPC1NAT1EIP
+        - AllocationId
+      SubnetId:
+        Ref: VPC1PubSubnet1
+    Type: AWS::EC2::NatGateway
+  NATGateway2:
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - VPC1NAT2EIP
+        - AllocationId
+      SubnetId:
+        Ref: VPC1PubSubnet2
+    Type: AWS::EC2::NatGateway
+  S3Endpoint:
+    Properties:
+      RouteTableIds:
+      - Ref: VPC1PrivateRouteTable1
+      - Ref: VPC1PrivateRouteTable2
+      ServiceName:
+        Fn::Join:
+        - ''
+        - - com.amazonaws.
+          - Ref: AWS::Region
+          - .s3
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::VPCEndpoint
+  VPC1:
+    Properties:
+      CidrBlock:
+        Ref: VPC1Cidr
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value:
+          Fn::Join:
+          - '-'
+          - - vpc
+    Type: AWS::EC2::VPC
+  VPC1GatewayToInternet:
+    Properties:
+      InternetGatewayId:
+        Ref: VPC1InternetGateway
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::VPCGatewayAttachment
+  VPC1InternetGateway:
+    Properties:
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value:
+          Fn::Join:
+          - '-'
+          - - vpc
+            - Internet-gateway
+    Type: AWS::EC2::InternetGateway
+  VPC1NAT1EIP:
+    Properties:
+      Domain: VPC1
+    Type: AWS::EC2::EIP
+  VPC1NAT2EIP:
+    Properties:
+      Domain: VPC1
+    Type: AWS::EC2::EIP
+  VPC1PriSubnet1:
+    Properties:
+      AvailabilityZone:
+        Ref: AvailabilityZone1
+      CidrBlock:
+        Ref: VPC1PrivateSubnet1
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value:
+          Fn::Join:
+          - '-'
+          - - vpc
+            - private-subnet-1
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::Subnet
+  VPC1PriSubnet1RTAssoc:
+    Properties:
+      RouteTableId:
+        Ref: VPC1PrivateRouteTable1
+      SubnetId:
+        Ref: VPC1PriSubnet1
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  VPC1PriSubnet2:
+    Properties:
+      AvailabilityZone:
+        Ref: AvailabilityZone2
+      CidrBlock:
+        Ref: VPC1PrivateSubnet2
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value:
+          Fn::Join:
+          - '-'
+          - - vpc
+            - private-subnet-2
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::Subnet
+  VPC1PriSubnet2RTAssoc:
+    Properties:
+      RouteTableId:
+        Ref: VPC1PrivateRouteTable2
+      SubnetId:
+        Ref: VPC1PriSubnet2
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  VPC1PrivateRoute1:
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NATGateway1
+      RouteTableId:
+        Ref: VPC1PrivateRouteTable1
+    Type: AWS::EC2::Route
+  VPC1PrivateRoute2:
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NATGateway2
+      RouteTableId:
+        Ref: VPC1PrivateRouteTable2
+    Type: AWS::EC2::Route
+  VPC1PrivateRouteTable1:
+    Properties:
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value:
+          Fn::Join:
+          - '-'
+          - - vpc
+            - Private-routetable-1
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::RouteTable
+  VPC1PrivateRouteTable2:
+    Properties:
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value:
+          Fn::Join:
+          - '-'
+          - - vpc
+            - Private-routeTable-2
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::RouteTable
+  VPC1PubSubnet1:
+    Properties:
+      AvailabilityZone:
+        Ref: AvailabilityZone1
+      CidrBlock:
+        Ref: VPC1PublicSubnet1
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value:
+          Fn::Join:
+          - '-'
+          - - vpc
+            - public-subnet-1
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::Subnet
+  VPC1PubSubnet1RTAssoc:
+    Properties:
+      RouteTableId:
+        Ref: VPC1PublicRouteTable
+      SubnetId:
+        Ref: VPC1PubSubnet1
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  VPC1PubSubnet2:
+    Properties:
+      AvailabilityZone:
+        Ref: AvailabilityZone2
+      CidrBlock:
+        Ref: VPC1PublicSubnet2
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value:
+          Fn::Join:
+          - '-'
+          - - vpc
+            - public-subnet-2
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::Subnet
+  VPC1PubSubnet2RTAssoc:
+    Properties:
+      RouteTableId:
+        Ref: VPC1PublicRouteTable
+      SubnetId:
+        Ref: VPC1PubSubnet2
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  VPC1PublicRoute:
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: VPC1InternetGateway
+      RouteTableId:
+        Ref: VPC1PublicRouteTable
+    Type: AWS::EC2::Route
+  VPC1PublicRouteTable:
+    Properties:
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value:
+          Fn::Join:
+          - '-'
+          - - vpc
+            - public-routetable
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::RouteTable
+
+  BastionSecurityGroup:
+    DependsOn: VPC1
+    Properties:
+      GroupDescription: Rules for Bastion Instances
+      SecurityGroupEgress:
+      - CidrIp:
+          Ref: VPC1Cidr
+        FromPort: '22'
+        IpProtocol: tcp
+        ToPort: '22'
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: '22'
+        IpProtocol: tcp
+        ToPort: '22'
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value: bastion
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::SecurityGroup
+  CommonSecurityGroup:
+    DependsOn: VPC1
+    Properties:
+      GroupDescription: Common Rules for all Instances
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: '80'
+        IpProtocol: tcp
+        ToPort: '80'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '443'
+        IpProtocol: tcp
+        ToPort: '443'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '3306'
+        IpProtocol: tcp
+        ToPort: '3306'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '4119'
+        IpProtocol: tcp
+        ToPort: '4119'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '4120'
+        IpProtocol: tcp
+        ToPort: '4120'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '4122'
+        IpProtocol: tcp
+        ToPort: '4122'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '123'
+        IpProtocol: udp
+        ToPort: '123'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '53'
+        IpProtocol: udp
+        ToPort: '53'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '4119'
+        IpProtocol: udp
+        ToPort: '4119'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '4120'
+        IpProtocol: udp
+        ToPort: '4120'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '4122'
+        IpProtocol: udp
+        ToPort: '4122'
+      - CidrIp: 0.0.0.0/0
+        FromPort: '-1'
+        IpProtocol: icmp
+        ToPort: '-1'
+      SecurityGroupIngress:
+      - CidrIp:
+          Ref: VPC1Cidr
+        FromPort: '-1'
+        IpProtocol: icmp
+        ToPort: '-1'
+      Tags:
+      - Key: Stack
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value: common
+      VpcId:
+        Ref: VPC1
+    Type: AWS::EC2::SecurityGroup
+
+  CommonAllowBastionSSHIn:
+    DependsOn:
+      - BastionSecurityGroup
+      - CommonSecurityGroup
+    Properties:
+      FromPort: '22'
+      GroupId:
+        Ref: CommonSecurityGroup
+      IpProtocol: tcp
+      SourceSecurityGroupId:
+        Ref: BastionSecurityGroup
+      ToPort: '22'
+    Type: AWS::EC2::SecurityGroupIngress
+
+  BastionNode:
+    DependsOn:
+      - VPC1PubSubnet1
+      - BastionSecurityGroup
+      - CommonSecurityGroup
+    Properties:
+      ImageId:
+        Fn::FindInMap:
+        - EcsAmi
+        - Ref: AWS::Region
+        - AMI
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      NetworkInterfaces:
+      - AssociatePublicIpAddress: 'true'
+        DeleteOnTermination: 'true'
+        DeviceIndex: '0'
+        GroupSet:
+        - Ref: CommonSecurityGroup
+        - Ref: BastionSecurityGroup
+        SubnetId: !Ref VPC1PubSubnet1
+      Tags:
+      - Key: Name
+        Value: bastion
+    Type: AWS::EC2::Instance
+
+Outputs:
+  VPC1:
+    Description: VPC1 ID
+    Value: !Ref VPC1
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1
+  VPC1Cidr:
+    Description: CIDR for VPC1
+    Value: !Ref VPC1Cidr
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1Cidr
+  VPC1PrivateSubnet1:
+    Description: VPC1 PrivateSubnet1 ID
+    Value: !Ref VPC1PriSubnet1
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1PrivateSubnet1
+  VPC1PrivateSubnet2:
+    Description: VPC1 PrivateSubnet2 ID
+    Value: !Ref VPC1PriSubnet2
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1PrivateSubnet2
+  VPC1PublicSubnet1:
+    Description: VPC1 PublicSubnet1 ID
+    Value: !Ref VPC1PubSubnet1
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1PublicSubnet1
+  VPC1PublicSubnet2:
+    Description: VPC1 PublicSubnet2 ID
+    Value: !Ref VPC1PubSubnet2
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1PublicSubnet2
+  VPC1PrivateRouteTable1:
+    Description: VPC1 PrivateRoutTable1 ID
+    Value: !Ref VPC1PrivateRouteTable1
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1PrivateRouteTable1
+  VPC1PrivateRouteTable2:
+    Description: VPC1 PrivateRoutTable2 ID
+    Value: !Ref VPC1PrivateRouteTable2
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1PrivateRouteTable2
+  VPC1PublicRouteTable:
+    Description: VPC1 PublicRoutTable ID
+    Value: !Ref VPC1PublicRouteTable
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC1PublicRouteTable
+  BastionSecurityGroup:
+    Description: Bastion node security group ID
+    Value: !Ref BastionSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-BastionSecurityGroup
+  CommonSecurityGroup:
+    Description: Common security group ID
+    Value: !Ref CommonSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-CommonSecurityGroup
+  BastionNode:
+    Description: Bastion node ID
+    Value: !Ref BastionNode
+    Export:
+      Name: !Sub ${AWS::StackName}-BastionNode

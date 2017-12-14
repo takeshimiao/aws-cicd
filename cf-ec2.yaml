@@ -1,0 +1,208 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: ALB and EC2 service
+Parameters:
+  InfraStackName:
+    Description: CF Infra. stack name
+    Type: String
+  KeyName:
+    Description: SSH key for EC2
+    Type: String
+    Default: cicd
+  ArtifactsBucketName:
+    Description: S3 bucket name for artifacts
+    Type: String
+    Default: codepipeline-us-east-1-876496930831
+  ArtifactObjectKey:
+    Description: Object key for artifact
+    Type: String
+  ASGInfo:
+    Default: 't2.micro,2'
+    Description: >
+                  ASGInfo[0] => EC2 type, ASGInfo[1] => Desire capacity in ASG
+    Type: CommaDelimitedList
+Mappings:
+  EcsAmi:
+    us-east-1:
+      AMI: ami-8c1be5f6
+    us-west-2:
+      AMI: ami-e689729e
+
+Resources:
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub "${InfraStackName}-VPC1"
+      GroupDescription: Rules for making connection with ALB
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIpv6: "::/0"
+      Tags:
+      - Key: Name
+        Value: !Sub 'alb-securitygroup'
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: ALBSecurityGroup
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub "${InfraStackName}-VPC1"
+      GroupDescription: Rules for making connection with EC2
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "8080"
+          ToPort: "8080"
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Tags:
+      - Key: Name
+        Value: !Sub 'ec2-securitygroup'
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+  EC2RoleProfile:
+    Type: AWS::IAM::InstanceProfile
+    DependsOn: EC2Role
+    Properties:
+      Path: /
+      Roles:
+        - !Ref EC2Role
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DependsOn: ALBSecurityGroup
+    Properties:
+      Name: !Sub 'ec2-alb' # cannot > 32 char
+      Type: application
+      Scheme: internet-facing
+      Subnets:
+          - Fn::ImportValue: !Sub "${InfraStackName}-VPC1PublicSubnet1"
+          - Fn::ImportValue: !Sub "${InfraStackName}-VPC1PublicSubnet2"
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - { Key: Name, Value: !Sub 'ec2-alb' }
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /healthcheck
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Port: 8080
+      Protocol: HTTP
+      VpcId:
+        Fn::ImportValue: !Sub "${InfraStackName}-VPC1"
+      Tags:
+        - { Key: Name, Value: !Sub 'ec2-targetgroup' }
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - ALB
+      - ALBTargetGroup
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+
+
+  EC2AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: ALBTargetGroup
+    Properties:
+      LaunchConfigurationName: !Ref EC2LaunchConfiguration
+      VPCZoneIdentifier:
+          - Fn::ImportValue: !Sub "${InfraStackName}-VPC1PrivateSubnet1"
+          - Fn::ImportValue: !Sub "${InfraStackName}-VPC1PrivateSubnet2"
+      DesiredCapacity: !Select [1, !Ref ASGInfo]
+      MinSize: !Select [1, !Ref ASGInfo]
+      MaxSize: 8
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 60
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+      MetricsCollection:
+        - Granularity: 1Minute # default all metrics
+      Tags:
+      - Key: Name
+        Value: !Sub 'ec2-auto-scaling-group'
+        PropagateAtLaunch: True
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Select [1, !Ref ASGInfo]
+        Timeout: PT5M
+    UpdatePolicy:
+      AutoScalingReplacingUpdate:
+        WillReplace: true
+
+  EC2LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    DependsOn:
+      - EC2RoleProfile
+    Properties:
+      IamInstanceProfile: !Ref EC2RoleProfile
+      ImageId: !FindInMap [EcsAmi, !Ref "AWS::Region", AMI]
+      InstanceType: !Select [0, !Ref ASGInfo]
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - Fn::ImportValue: !Sub "${InfraStackName}-CommonSecurityGroup"
+        - !Ref EC2SecurityGroup
+      AssociatePublicIpAddress: False
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp2
+            DeleteOnTermination: True
+      UserData:
+        "Fn::Base64": !Sub |
+          #!/bin/bash
+
+          pip install bottle
+
+          cd ~ec2-user/
+          aws s3 cp s3://${ArtifactsBucketName}/${ArtifactObjectKey} ./artifacts.zip
+          unzip ./artifacts.zip
+          mv dist/aws-cicd-*.tar.gz ./
+          tar -zxvf aws-cicd-*.tar.gz
+          ln -f -s aws-cicd-*/ aws-cicd
+
+          yum install -y aws-cfn-bootstrap
+
+          # create conf file
+          # /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource EC2LaunchConfiguration
+
+
+          python aws-cicd/api/main.py &> server.log &
+
+
+          # send signal status to ASG
+          /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource EC2AutoScalingGroup
