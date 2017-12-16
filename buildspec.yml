@@ -20,3 +20,4 @@ phases:
 artifacts:
   files:
     - dist/aws-cicd-0.1.0.tar.gz
+    - cf-dev-configs.json
