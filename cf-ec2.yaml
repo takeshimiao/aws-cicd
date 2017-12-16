@@ -232,7 +232,7 @@ Resources:
       MetricName: TargetReponseTime
       Dimensions:
         - Name: LoadBalancer
-          Value: !Ref ALB
+          Value: !GetAtt ALB.LoadBalancerFullName
       ExtendedStatistic: p95
       Period: 60
       EvaluationPeriods: 5
@@ -244,13 +244,42 @@ Resources:
         - !Ref AlarmSNSTopic
       TreatMissingData: notBreaching
 
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    DependsOn: ALB
+    Properties:
+      DashboardName: !Sub ${AWS::StackName}-dashboard
+      DashboardBody: !Sub
+        - >
+          {
+            "widgets": [
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 0,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "metrics": [
+                    [
+                      "AWS/ApplicationELB",
+                      "TargetReponseTime",
+                      "LoadBalancer",
+                      "${ALBFullName}"
+                    ]
+                  ],
+                  "period": 60,
+                  "stat": "p95",
+                  "region": "${Region}",
+                  "title": "ALB P95 Response time"
+                }
+              }
+            ]
+          }
+        - { ALBFullName: !GetAtt ALB.LoadBalancerFullName, Region: !Ref 'AWS::Region'}
+
+
 Outputs:
   ALBDNSName:
     Description: ALB DNS name
     Value: !GetAtt ALB.DNSName
-  AlarmSNSTopic:
-    Description: Alarm SNS TOpic
-    Value: !Ref AlarmSNSTopic
-  ALBP95LatencyAlarm:
-    Description: Alarm for ALB p95 latency
-    Value: !Ref ALBP95LatencyAlarm
