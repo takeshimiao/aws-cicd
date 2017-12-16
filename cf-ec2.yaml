@@ -229,7 +229,7 @@ Resources:
     Properties:
       AlarmDescription: !Sub "Alarm for ALB p95 latency > ${ALBP95LatencyAlarmThreshold} secs"
       Namespace: AWS/ApplicationELB
-      MetricName: TargetReponseTime
+      MetricName: TargetResponseTime
       Dimensions:
         - Name: LoadBalancer
           Value: !GetAtt ALB.LoadBalancerFullName
@@ -263,7 +263,7 @@ Resources:
                   "metrics": [
                     [
                       "AWS/ApplicationELB",
-                      "TargetReponseTime",
+                      "TargetResponseTime",
                       "LoadBalancer",
                       "${ALBFullName}"
                     ]
