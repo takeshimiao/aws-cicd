@@ -236,7 +236,8 @@ Resources:
 
           python aws-cicd/api/main.py &> server.log &
 
-
+          # healthcheck for service
+          curl http://localhost:8080/healthcheck
           # send signal status to ASG
           /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource EC2AutoScalingGroup
     Metadata:
@@ -250,6 +251,8 @@ Resources:
               content: !Sub >
                 [secret]
                 var_name=${SecretName}
+                [aws]
+                region=${AWS::Region}
 
   AlarmSNSTopic:
     Type: AWS::SNS::Topic

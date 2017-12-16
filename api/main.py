@@ -24,8 +24,9 @@ def get_secret():
     parser = ConfigParser.RawConfigParser()
     p = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'conf', 'secret.ini')
     parser.read(p)
+    region = parser.get('aws', 'region')
     var_name = parser.get('secret', 'var_name')
-    client = boto3.client('ssm')
+    client = boto3.client('ssm', region_name=region)
     secret = client.get_parameter(Name=var_name, WithDecryption=True)
     return secret
 
