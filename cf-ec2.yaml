@@ -246,11 +246,9 @@ Resources:
               mode: "000755"
               owner: root
               group: root
-              content: !Sub
-              - |
+              content: !Sub >
                 [secret]
                 var_name=${SecretName}
-
 
   AlarmSNSTopic:
     Type: AWS::SNS::Topic
