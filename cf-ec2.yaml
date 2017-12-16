@@ -219,6 +219,7 @@ Resources:
           #!/bin/bash
 
           pip install bottle
+          pip install boto3
 
           cd ~ec2-user/
           aws s3 cp s3://${ArtifactsBucketName}/${ArtifactObjectKey} ./artifacts.zip
