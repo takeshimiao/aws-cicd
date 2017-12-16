@@ -18,8 +18,16 @@ Parameters:
   ASGInfo:
     Default: 't2.micro,2'
     Description: >
-                  ASGInfo[0] => EC2 type, ASGInfo[1] => Desire capacity in ASG
+                  ASGInfo[0] => EC2 type,
+                  ASGInfo[1] => Desire capacity in ASG,
     Type: CommaDelimitedList
+  ALBP95LatencyAlarmThreshold:
+    Description: p95 Latency alarm threshold (sec)
+    Type: Number
+    Default: 20
+  AlarmEmail:
+    Description: Alarm email
+    Type: String
 Mappings:
   EcsAmi:
     us-east-1:
@@ -206,7 +214,43 @@ Resources:
           # send signal status to ASG
           /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource EC2AutoScalingGroup
 
+  AlarmSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        -
+          Endpoint: !Ref AlarmEmail
+          Protocol: email
+      DisplayName: AlarmTopic
+
+  ALBP95LatencyAlarm:
+    DependsOn: AlarmSNSTopic
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: !Sub "Alarm for ALB p95 latency > ${ALBP95LatencyAlarmThreshold} secs"
+      Namespace: AWS/ApplicationELB
+      MetricName: TargetReponseTime
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !Ref ALB
+      ExtendedStatistic: p95
+      Period: 60
+      EvaluationPeriods: 5
+      Threshold: !Ref ALBP95LatencyAlarmThreshold
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlarmSNSTopic
+      OKActions:
+        - !Ref AlarmSNSTopic
+      TreatMissingData: notBreaching
+
 Outputs:
   ALBDNSName:
     Description: ALB DNS name
     Value: !GetAtt ALB.DNSName
+  AlarmSNSTopic:
+    Description: Alarm SNS TOpic
+    Value: !Ref AlarmSNSTopic
+  ALBP95LatencyAlarm:
+    Description: Alarm for ALB p95 latency
+    Value: !Ref ALBP95LatencyAlarm
