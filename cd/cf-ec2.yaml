@@ -262,7 +262,7 @@ Resources:
         -
           Endpoint: !Ref AlarmEmail
           Protocol: email
-      DisplayName: AlarmTopic
+      DisplayName: !Sub ${AWS::StackName}-Topic
 
   ALBP95LatencyAlarm:
     DependsOn: AlarmSNSTopic

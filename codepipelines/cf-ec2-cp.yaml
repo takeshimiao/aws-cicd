@@ -1,0 +1,273 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ALB and EC2 service
+Parameters:
+  GitHubUserName:
+    Description: GitHub user name
+    Type: String
+  GitHubRepoName:
+    Description: GitHub repository name
+    Type: String
+    Default: aws-cicd
+  GitHubBranchName:
+    Description: GitHub branch name
+    Type: String
+    Default: master
+  GitHubOAuthToken:
+    Description: OAuth token for access GitHub
+    Type: String
+    NoEcho: True
+  NotificationEmail:
+    Description: Alarm email
+    Type: String
+  KeyName:
+    Description: SSH key for EC2
+    Type: String
+
+Mappings:
+  EcsAmi:
+    us-east-1:
+      AMI: ami-8c1be5f6
+    us-west-2:
+      AMI: ami-e689729e
+
+Resources:
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess #TODO need to decrease IAM scope
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    DependsOn: CodeBuildServiceRole
+    Properties:
+      Name: !Sub ${AWS::StackName}-codebuild
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/python:2.7.12
+        PrivilegedMode: False
+      Source:
+        Type: CODEPIPELINE
+      TimeoutInMinutes: 10
+
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess #TODO need to decrease IAM scope
+
+  CloudFormationServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess #TODO need to decrease IAM scope
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        -
+          Endpoint: !Ref NotificationEmail
+          Protocol: email
+      DisplayName: !Sub ${AWS::StackName}-Topic
+
+  ArtifactStoreBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-cicd-test
+      VersioningConfiguration:
+        Status: Enabled
+      AccessControl: BucketOwnerFullControl
+
+  CodePipelineProject:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+      - CodePipelineServiceRole
+      - CodeBuildProject
+      - CloudFormationServiceRole
+      - ArtifactStoreBucket
+    Properties:
+      Name: !Sub ${AWS::StackName}-codepipeline
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages:
+        -
+          Name: Source
+          Actions:
+            -
+              Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              OutputArtifacts:
+                -
+                  Name: MyApp
+              Configuration:
+                Owner: !Ref GitHubUserName
+                Repo: !Ref GitHubRepoName
+                PollForSourceChanges: True
+                Branch: !Ref GitHubBranchName
+                OAuthToken: !Ref GitHubOAuthToken
+              RunOrder: 1
+        -
+          Name: Build
+          Actions:
+            -
+              Name: CodeBuild
+              InputArtifacts:
+                -
+                  Name: MyApp
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              OutputArtifacts:
+                -
+                  Name: MyAppBuild
+              RunOrder: 1
+        -
+          Name: Deploy
+          Actions:
+            -
+              Name: CreateVPC
+              InputArtifacts:
+                -
+                  Name: MyAppBuild
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode : REPLACE_ON_FAILURE
+                RoleArn : !GetAtt CloudFormationServiceRole.Arn
+                Capabilities : CAPABILITY_IAM
+                StackName : !Sub ${AWS::StackName}-vpc-ec2
+                TemplateConfiguration : MyAppBuild::cd/cf-vpc-dev-configs.json
+                TemplatePath : MyAppBuild::cd/cf-vpc.yaml
+                ParameterOverrides: !Sub >
+                  {
+                    "KeyName" : "${KeyName}"
+                  }
+              RunOrder: 1
+            -
+              Name: CreateService
+              InputArtifacts:
+                -
+                  Name: MyAppBuild
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode : REPLACE_ON_FAILURE
+                RoleArn : !GetAtt CloudFormationServiceRole.Arn
+                Capabilities : CAPABILITY_IAM
+                StackName : !Sub ${AWS::StackName}-ec2
+                TemplateConfiguration : MyAppBuild::cd/cf-ec2-dev-configs.json
+                TemplatePath : MyAppBuild::cd/cf-ec2.yaml
+                ParameterOverrides: !Sub >
+                  {
+                    "ArtifactsBucketName": {
+                      "Fn::GetArtifactAtt": [
+                        "MyAppBuild",
+                        "BucketName"
+                      ]
+                    },
+                    "ArtifactObjectKey": {
+                      "Fn::GetArtifactAtt": [
+                        "MyAppBuild",
+                        "ObjectKey"
+                      ]
+                    },
+                    "InfraStackName": "${AWS::StackName}-vpc-ec2",
+                    "AlarmEmail": "${NotificationEmail}",
+                    "KeyName" : "${KeyName}"
+                  }
+              RunOrder: 2
+        -
+          Name: Delete
+          Actions:
+            -
+              Name: ApproveForDeletion
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Version: 1
+                Provider: Manual
+              Configuration:
+                NotificationArn: !Ref SNSTopic
+                CustomData: !Sub >
+                  Do you want to delete the resources created by CF stacks: ${AWS::StackName}-vpc-ec2 and ${AWS::StackName}-ec2 ?
+              RunOrder: 1
+            -
+              Name: DeleteService
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                StackName: !Sub ${AWS::StackName}-ec2
+                ActionMode : DELETE_ONLY
+                RoleArn : !GetAtt CloudFormationServiceRole.Arn
+              RunOrder: 2
+            -
+              Name: DeleteVPC
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                StackName: !Sub ${AWS::StackName}-vpc-ec2
+                ActionMode : DELETE_ONLY
+                RoleArn : !GetAtt CloudFormationServiceRole.Arn
+              RunOrder: 3
+
+      ArtifactStore:
+        Type: S3
+        Location:
+          Ref: ArtifactStoreBucket
