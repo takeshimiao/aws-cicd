@@ -20,5 +20,5 @@ artifacts:
     - dist/aws-cicd-0.1.0.tar.gz
     - cd/cf-vpc.yaml
     - cd/cf-vpc-dev-configs.json
-    - cf-ec2.yaml
-    - cf-ec2-dev-configs.json
+    - cd/cf-ec2.yaml
+    - cd/cf-ec2-dev-configs.json
