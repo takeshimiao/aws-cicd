@@ -28,6 +28,11 @@ Parameters:
   AlarmEmail:
     Description: Alarm email
     Type: String
+  SecretName:
+    Description: Secret name stored in SSM parameter store
+    Type: String
+    Default: mysecret
+
 Mappings:
   EcsAmi:
     us-east-1:
@@ -86,6 +91,26 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      Policies:
+        - PolicyName: KMSKeyDecryption
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action: kms:Decrypt
+                Resource: '*'
+        - PolicyName: SSMGetParameters
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource: '*'
+
 
   EC2RoleProfile:
     Type: AWS::IAM::InstanceProfile
@@ -213,6 +238,19 @@ Resources:
 
           # send signal status to ASG
           /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource EC2AutoScalingGroup
+    Metadata:
+      'AWS::CloudFormation::Init':
+        config:
+          files:
+            "/home/ec2-user/aws-cicd/api/conf/secret.ini":
+              mode: "000755"
+              owner: root
+              group: root
+              content: !Sub
+              - |
+                [secret]
+                var_name=${SecretName}
+
 
   AlarmSNSTopic:
     Type: AWS::SNS::Topic

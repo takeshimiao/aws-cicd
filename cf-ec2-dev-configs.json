@@ -4,6 +4,7 @@
     "InfraStackName" : "vpc-ec2-01",
     "ArtifactsBucketName" : "Will be overridden by artifacts.BucketName",
     "ArtifactObjectKey" : "Will be overridden by artifacts.ObjectKey",
-    "ASGInfo" : "t2.micro,2"
+    "ASGInfo" : "t2.micro,2",
+    "SecretName" : "mysecret"
   }
 }

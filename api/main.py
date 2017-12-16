@@ -1,6 +1,9 @@
+import ConfigParser
 import logging
 
 import time
+
+import boto3
 from bottle import get, run
 
 logging.basicConfig()
@@ -18,10 +21,12 @@ def sleep(secs=20):
 @get('/secret')
 def get_secret():
     import os
-    p = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'conf', 'secret.txt')
-    secret = None
-    with open(p, 'rb') as f:
-        secret = f.read()
+    parser = ConfigParser.RawConfigParser()
+    p = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'conf', 'secret.ini')
+    parser.read(p)
+    var_name = parser.get('secret', 'var_name')
+    client = boto3.client('ssm')
+    secret = client.get_parameter(Name=var_name, WithDecryption=True)
     return secret
 
 

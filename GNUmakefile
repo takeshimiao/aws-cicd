@@ -39,7 +39,3 @@ dist:
 .PHONY: test
 test:
 	python setup.py test
-
-.PHONY: set-secret
-set-secret:
-	echo -n "$(SECRET)" > api/conf/secret.txt

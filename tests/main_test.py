@@ -23,10 +23,3 @@ class MainTest(unittest.TestCase):
         self.assertTrue(tdiff.seconds >= 5)
         self.assertEqual('sleep for {} secs'.format(secs), msg)
 
-    def test_get_secret(self):
-        secret = get_secret()
-        p = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../api/conf', 'secret.txt')
-        with open(p, 'rb') as f:
-            expected = f.read()
-        self.assertEqual(expected, secret)
-

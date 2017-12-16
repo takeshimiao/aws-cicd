@@ -20,7 +20,7 @@ setup(name='aws-cicd',
       package_dir={'api': 'api'},
       package_data={'': ['conf/*']},
       long_description=readme(),
-      install_requires=['bottle==0.12.13'],
+      install_requires=['bottle==0.12.13', 'boto3==1.4.4'],
       test_suite='tests',
       tests_require=['nose']
       )
