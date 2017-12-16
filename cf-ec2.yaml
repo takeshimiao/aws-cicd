@@ -205,3 +205,8 @@ Resources:
 
           # send signal status to ASG
           /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource EC2AutoScalingGroup
+
+Outputs:
+  ALBDNSName:
+    Description: ALB DNS name
+    Value: !GetAtt ALB.DNSName
