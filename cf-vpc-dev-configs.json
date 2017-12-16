@@ -7,10 +7,6 @@
     "VPC1PrivateSubnet2" : "192.168.1.64/26",
     "VPC1PublicSubnet1" : "192.168.1.128/26",
     "VPC1PublicSubnet2" : "192.168.1.192/26",
-    "KeyName" : "cicd",
-    "InfraStackName" : "vpc-ec2-01",
-    "ArtifactsBucketName" : "Will be overridden by artifacts.BucketName",
-    "ArtifactObjectKey" : "Will be overridden by artifacts.ObjectKey",
-    "ASGInfo" : "t2.micro,2"
+    "KeyName" : "cicd"
   }
 }
