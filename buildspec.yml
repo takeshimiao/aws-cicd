@@ -1,19 +1,22 @@
 version: 0.2
 
+env:
+  parameter-store:
+    SECRET: "mysecret" # value is th variable name stored in parameter-store
+
 phases:
   install:
     commands:
-      - echo print out CODEBUILD vars...
-      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
-      - echo $CODEBUILD_SOURCE_VERSION
+      - echo do nothing...
   pre_build:
     commands:
       - echo run unittests om `date`
-      - python setup.py test
+      - make test
   build:
     commands:
       - echo Build started on `date`
-      - python setup.py sdist
+      - make set-secret SECRET=${SECRET}
+      - make dist
   post_build:
     commands:
       - echo Build completed on `date`
