@@ -237,6 +237,7 @@ Resources:
           python aws-cicd/api/main.py &> server.log &
 
           # healthcheck for service
+          sleep 5
           curl http://localhost:8080/healthcheck
           # send signal status to ASG
           /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource EC2AutoScalingGroup
