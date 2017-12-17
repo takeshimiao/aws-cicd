@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
 Description: CodePipeline for CI/CD with EC2 hands on
 Parameters:
   GitHubUserName:
@@ -22,7 +23,23 @@ Parameters:
   KeyName:
     Description: SSH key for EC2
     Type: String
-
+  AritifactsBucketName:
+    Description: A S3 bucke name for storing codepipelines related arfiacts
+    Type: String
+    Default: aws-cicd-public
+  KMSEncryptionFunctionObjectKey:
+    Description: Object key for KMS Encryption function
+    Type: String
+    Default: kms_encryption.zip
+  YourSecretName:
+    Description: A parameter name used in SSM parameter store
+    Type: String
+    Default: mysecret
+  GiveMeYourSecret:
+    Description: A secret you wanna tell me ;)
+    Type: String
+    NoEcho: True
+    Default: mysecretonaws
 Mappings:
   EcsAmi:
     us-east-1:
@@ -224,7 +241,8 @@ Resources:
                     },
                     "InfraStackName": "${AWS::StackName}-vpc-ec2",
                     "AlarmEmail": "${NotificationEmail}",
-                    "KeyName" : "${KeyName}"
+                    "KeyName" : "${KeyName}",
+                    "SecretName" : "${YourSecretName}"
                   }
               RunOrder: 2
         -
@@ -271,3 +289,68 @@ Resources:
         Type: S3
         Location:
           Ref: ArtifactStoreBucket
+
+  MyKMSKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: "KMS key used in Pipeline"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: "MyKMSKey"
+        Statement:
+          -
+            Sid: "Allow administration of the key"
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: "kms:*"
+            Resource: "*"
+
+  KeyAlias:
+    Type: AWS::KMS::Alias
+    DependsOn: MyKMSKey
+    Properties:
+      AliasName: !Sub 'alias/${AWS::StackName}-MyKMSKey'
+      TargetKeyId: !Ref MyKMSKey
+
+  KMSEncryptionFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: MyKMSKey
+    Properties:
+      Handler: main.handler
+      Runtime: python2.7
+      CodeUri:
+        Bucket: !Ref AritifactsBucketName
+        Key: !Ref KMSEncryptionFunctionObjectKey
+      Timeout: 120
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'kms:Encrypt'
+              Resource: !GetAtt MyKMSKey.Arn
+      Tags:
+        Name: !Sub ${AWS::StackName}-lambda-kms-encryption
+
+  EncryptedSecret:
+    Type: Custom::EncryptedSecret
+    DependsOn: KMSEncryptionFunction
+    Properties:
+      ServiceToken: !GetAtt KMSEncryptionFunction.Arn
+      KeyId: !Ref MyKMSKey
+      PlainText: !Ref GiveMeYourSecret
+
+  SecretParameter:
+    Type: AWS::SSM::Parameter
+    DependsOn: EncryptedSecret
+    Properties:
+      Name: !Ref YourSecretName
+      Type: String
+      Value: !GetAtt EncryptedSecret.CipherText
+      Description: A secret given by user
+
+Outputs:
+  EncryptedSecret:
+    Value: !GetAtt EncryptedSecret.CipherText
