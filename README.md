@@ -39,7 +39,7 @@ Frankly to say, there are variety of technology combinations doing CI/CD on ever
 
 ### 0. Overview
 
-<img src="images/hands-on_01_cicd-w-ec2-overview_v01.PNG" width="600" height="400"/>
+<img src="images/hands-on_01_cicd-w-ec2-overview_v01.PNG" width="800" height="400"/>
 
 We use AWS CodePipeline to pull commits from GitHub, build, test and deploy a standalone VPC and a very simple API service running within it, in AWS region us-east-1.
 
