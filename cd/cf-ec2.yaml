@@ -24,14 +24,13 @@ Parameters:
   ALBP95LatencyAlarmThreshold:
     Description: p95 Latency alarm threshold (sec)
     Type: Number
-    Default: 20
+    Default: 10
   AlarmEmail:
     Description: Alarm email
     Type: String
   SecretName:
     Description: Secret name stored in SSM parameter store
     Type: String
-    Default: mysecret
 
 Mappings:
   EcsAmi:
