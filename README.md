@@ -39,4 +39,93 @@ Pls remember to `Confirm subscription` of two mails sent from AWS SNS topics in 
 
 ### 2. AWS CodePipline should automatically trigger a build at first place
 
- 
+You can see the CodePipline project starts to trigger a build automatically in few minutes. Due to we set `PollForSourceChanges: True` in Source action.
+
+
+After the service provisioning gets to `CREATE_COMPLETED`, you can get the endpoint FQDN at the row ALBDNSName in Output tab in AWS CloudFormation console. let's veirfy your build whether successfully !
+
+```bash
+curl http://<ALBDNSName>
+Welcome to my home
+```
+
+The very simple API impl. is [api/main.py](api/main.py) you can take a look if interested in.
+
+### 3. Take a look at every component in the overall CodePipeline
+
+Take a look on [CodePipline console](https://console.aws.amazon.com/codepipeline/home?region=us-east-1#/dashboard) and corresponding docs as follows to clarify our questions.
+
+#### 3.1 What is Stage, action and transition ?
+
+http://docs.aws.amazon.com/codepipeline/latest/userguide/concepts.html#concepts-how-it-works
+
+#### 3.2 What types of actions ?
+
+http://docs.aws.amazon.com/codepipeline/latest/userguide/integrations-action-type.html
+
+The action types we are using are...
+
+Category | Action
+---------|--------
+Source | GitHub
+Build | AWS CodeBuild
+Deploy | CloudFormation
+Approval | Manual approval
+
+You can see more details in [cf-ec2-cp.yaml](codepipelines/cf-ec2-cp.yaml) 
+
+#### 3.3 Why not use Jenkins, CodeDeploy, or a or b or c ?
+
+Let's say it again, this hands-on simply plays as a quick start to bring you the overall concepts and a PoC to home. And I hope, it can help you an idea to tailor your own one.
+
+But I still can say that, CodePipeline using Jenkins need to launch a long running EC2 instance behind the scene, it is too costly for a PoC. And CodeDeploy can support variety of deployment methods (Lambda, ECS, etc), but in the end, I still need to use CloudFormation to provision monitoring related resources based on end-to-end point of view. And also, CloudFormation is more portable running in diffrent CI servers (Maybe :P).
+
+
+### 4. Take a look at our RESTful API service
+
+The very simple API impl. is [api/main.py](api/main.py) you can take a look if interested in.
+
+#### 4.1 healthcheck API
+
+```bash
+curl http://<ALBDNSName>/healthcheck
+Hello World!
+```
+
+This API is used by ALB and auto-scaling group, auto-scaling group will increase/decrease based on the responses of this API on every EC2 instance.
+
+The configuration order will be ALB -> Target group -> Auto-scaling group -> Auto-scaling group configuration -> EC2. You can get start on following doc.
+
+http://docs.aws.amazon.com/autoscaling/latest/userguide/autoscaling-load-balancer.html
+
+
+#### 4.2 What will happen if we want to update/deploy our new codes to existing service ?
+
+In this hands-on we are using A/B deployment (create 2 new EC2s -> all healthchek passed -> delete 2 old EC2s), the details in following doc
+
+http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-updatepolicy.html
+
+Take a look on [cf-ec2.yaml](cd/cf-ec2.yaml) for more details.
+
+#### 4.3 To use `AWS::CloudFormation::Init` instead of OpsWorks service
+
+OpsWorks service has a lot of pitfalls and performance issues according my experiences, I recommend to use `AWS::CloudFormation::Init` instead.
+
+http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-init.html
+
+Actually, `AWS::CloudFormation::Init` is based on [cloud-init](https://cloudinit.readthedocs.io/en/latest/) project.
+
+
+#### 4.4 sleep API
+
+```bash
+curl http://<ALBDNSName>:8080/sleep/30
+sleep for 30 secs
+```
+
+https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#alarm:alarmFilter=inOk
+
+#### 4.5 secret API
+
+TBD...
+
