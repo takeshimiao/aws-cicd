@@ -31,7 +31,7 @@ Frankly to say, there are variety of technology combinations doing CI/CD on ever
 
 Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec2-cp.yaml](codepipelines/cf-ec2-cp.yaml)) in your AWS account.
 
-<a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://s3.amazonaws.com/aws-cicd-public/cf-ec2-cp.yaml" target="_blank"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+<a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://s3.amazonaws.com/aws-cicd-public/cf-ec2-cp.yaml" target="_blank" rel="noopener"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
 
 You can see the progress of provisioning of CodePipline on AWS CloudFormation console. After provisioning status gets to `CREATE_COMPLETED`, pls go to [CodePipline console](https://console.aws.amazon.com/codepipeline/home?region=us-east-1#/dashboard) to find your first CodePipline project.
  
