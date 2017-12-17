@@ -14,8 +14,8 @@ def healthcheck():
     return "Hello World!"
 
 @get('/sleep/<secs>')
-def sleep(secs=20):
-    time.sleep(secs)
+def sleep(secs):
+    time.sleep(float(secs))
     return 'sleep for {} secs'.format(secs)
 
 @get('/secret')
