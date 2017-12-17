@@ -40,6 +40,11 @@ Parameters:
     Type: String
     NoEcho: True
     Default: mysecretonaws
+  PollForSourceChanges:
+    Description: Whether to trigger build if source changed
+    Type: String
+    AllowedPattern: 'True|False'
+    Default: 'True'
 Mappings:
   EcsAmi:
     us-east-1:
@@ -160,7 +165,7 @@ Resources:
               Configuration:
                 Owner: !Ref GitHubUserName
                 Repo: !Ref GitHubRepoName
-                PollForSourceChanges: True
+                PollForSourceChanges: !Ref PollForSourceChanges
                 Branch: !Ref GitHubBranchName
                 OAuthToken: !Ref GitHubOAuthToken
               RunOrder: 1
