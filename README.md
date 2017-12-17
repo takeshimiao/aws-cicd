@@ -31,7 +31,7 @@ There are two more things need your actions in your GitHub account
 
 # Hands-on
 
-I am trying to leverage as most managed services on AWS as we can, so I picked S3, [CodePipline](https://aws.amazon.com/codepipeline/), CodeBuild and CloudFormation as a foundation for our hands-on.    
+I am trying to leverage as most managed services on AWS as I can, so I picked S3, [CodePipline](https://aws.amazon.com/codepipeline/), CodeBuild and CloudFormation as a foundation for our hands-on.    
 
 Frankly to say, there are variety of technology combinations doing CI/CD on every environment (In this case, is AWS), so my choices here may not be the most suitable for your needs, it simply plays as a quick start to bring you the overall concepts and a PoC to home. And I hope, it can help you an idea to tailor your own one. 
 
