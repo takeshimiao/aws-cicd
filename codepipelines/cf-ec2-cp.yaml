@@ -203,7 +203,7 @@ Resources:
                 StackName : !Sub ${AWS::StackName}-vpc-ec2
                 TemplateConfiguration : MyAppBuild::cd/cf-vpc-dev-configs.json
                 TemplatePath : MyAppBuild::cd/cf-vpc.yaml
-                ParameterOverrides: !Sub >
+                ParameterOverrides: !Sub |
                   {
                     "KeyName" : "${KeyName}"
                   }
@@ -225,7 +225,7 @@ Resources:
                 StackName : !Sub ${AWS::StackName}-ec2
                 TemplateConfiguration : MyAppBuild::cd/cf-ec2-dev-configs.json
                 TemplatePath : MyAppBuild::cd/cf-ec2.yaml
-                ParameterOverrides: !Sub >
+                ParameterOverrides: !Sub |
                   {
                     "ArtifactsBucketName": {
                       "Fn::GetArtifactAtt": [
