@@ -230,7 +230,7 @@ Resources:
           yum install -y aws-cfn-bootstrap
 
           # create conf file
-          # /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource EC2LaunchConfiguration
+          /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource EC2LaunchConfiguration
 
 
           python aws-cicd/api/main.py &> server.log &
