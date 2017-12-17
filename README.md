@@ -5,6 +5,7 @@ Materials for AWS CICD workshop
 * [Prerequisites](#prerequisites)
 * [Hands-on](hands-on)
   * [CI/CD with EC2 on AWS](#cicd-with-ec2-on-aws)
+    * [0. Overview](#0-overview)
     * [1. Launch AWS CodePipeline](#1-launch-aws-codepipeline)
     * [2. AWS CodePipline should automatically trigger a build at first place](#2-aws-codepipline-should-automatically-trigger-a-build-at-first-place)
     * [3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline)
