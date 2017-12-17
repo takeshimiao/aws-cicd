@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: ALB and EC2 service
+Description: CodePipeline for CI/CD with EC2 hands on
 Parameters:
   GitHubUserName:
     Description: GitHub user name

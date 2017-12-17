@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: ALB and EC2 service
+Description: A very simple RESTful API service based on ALB with EC2 service and CloudWatch monitorings
 Parameters:
   InfraStackName:
     Description: CF Infra. stack name
@@ -276,7 +276,7 @@ Resources:
           Value: !GetAtt ALB.LoadBalancerFullName
       ExtendedStatistic: p95
       Period: 60
-      EvaluationPeriods: 5
+      EvaluationPeriods: 1
       Threshold: !Ref ALBP95LatencyAlarmThreshold
       ComparisonOperator: GreaterThanThreshold
       AlarmActions:
@@ -284,6 +284,7 @@ Resources:
       OKActions:
         - !Ref AlarmSNSTopic
       TreatMissingData: notBreaching
+      Unit: Seconds
 
   Dashboard:
     Type: AWS::CloudWatch::Dashboard

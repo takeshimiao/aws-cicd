@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: VPC with public, private subnet, and NAT
+Description: VPC with public, private subnet,NAT and a bastion node
 
 Parameters:
   AvailabilityZone1:
