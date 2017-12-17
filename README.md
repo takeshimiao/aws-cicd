@@ -1,6 +1,15 @@
 # aws-cicd
 Materials for AWS CICD workshop
 
+# Content
+* [Prerequisites](#prerequisites)
+* [Hands-on](hands-on)
+  * [CI/CD with EC2 on AWS](#cicd-with-ec2-on-aws)
+    * [1. Launch AWS CodePipeline](#1-launch-aws-codepipeline)
+    * [2. AWS CodePipline should automatically trigger a build at first place](#2-aws-codepipline-should-automatically-trigger-a-build-at-first-place)
+    * [3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline)
+    * [4. Take a look at our RESTful API service](#4-take-a-look-at-our-restful-api-service)
+
 # Prerequisites
 
 1. An AWS ([Amazon Web Service](https://aws.amazon.com/)) account W/ **administrator permission**, if you have none, to get one !
@@ -25,9 +34,11 @@ I am trying to leverage as most managed services on AWS as we can, so I picked S
 Frankly to say, there are variety of technology combinations doing CI/CD on every environment (In this case, is AWS), so my choices here may not be the most suitable for your needs, it simply plays as a quick start to bring you the overall concepts and a PoC to home. And I hope, it can help you an idea to tailor your own one. 
 
 ## CI/CD with EC2 on AWS
+[Back to top](#content)
 
 
 ### 1. Launch AWS CodePipeline
+[Back to top](#content)
 
 Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec2-cp.yaml](codepipelines/cf-ec2-cp.yaml)) in your AWS account.
 
@@ -38,6 +49,7 @@ You can see the progress of provisioning of CodePipline on AWS CloudFormation co
 Pls remember to `Confirm subscription` of two mails sent from AWS SNS topics in your mailbox, which is the email address you had written in CloudFormation.
 
 ### 2. AWS CodePipline should automatically trigger a build at first place
+[Back to top](#content)
 
 You can see the CodePipline project starts to trigger a build automatically in few minutes. Due to we set `PollForSourceChanges: True` in Source action.
 
@@ -52,6 +64,7 @@ Welcome to my home
 The very simple API impl. is [api/main.py](api/main.py) you can take a look if interested in.
 
 ### 3. Take a look at every component in the overall CodePipeline
+[Back to top](#content)
 
 Take a look on [CodePipline console](https://console.aws.amazon.com/codepipeline/home?region=us-east-1#/dashboard) and corresponding docs as follows to clarify our questions.
 
@@ -82,6 +95,7 @@ But I still can say that, CodePipeline using Jenkins need to launch a long runni
 
 
 ### 4. Take a look at our RESTful API service
+[Back to top](#content)
 
 The very simple API impl. is [api/main.py](api/main.py) you can take a look if interested in.
 
@@ -123,9 +137,26 @@ curl http://<ALBDNSName>:8080/sleep/30
 sleep for 30 secs
 ```
 
-https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#alarm:alarmFilter=inOk
+This API is used to create a response latency (by seconds) of our service, to trigger the backend alarm.
+
+See the service alarm on [CloudWatch Alarm console](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#alarm:alarmFilter=inOk)
+
+See the service dashboard on [CloudWatch Dashboard](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:)
+
+All these basic stuffs can be created by AWS CloudFormation
+
+http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cw-alarm.html
+http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cw-dashboard.html
+
+But actually, there are still more complicated usecases the CloudFormation can not fulfill them in a out-of-box manner, in these cases, we can consider to use `AWS::CloudFormation::CustomResource` to deal them. 
+
+http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-cfn-customresource.html
+
+`AWS::CloudFormation::CustomResource` is actually a Lambda function extension plugged in CloudFormation service.
 
 #### 4.5 secret API
 
 TBD...
+
+
 
