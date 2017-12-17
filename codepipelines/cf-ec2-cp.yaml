@@ -45,6 +45,9 @@ Parameters:
     Type: String
     AllowedPattern: 'True|False'
     Default: 'True'
+Conditions:
+  PollForSourceChanges: !Equals [!Ref PollForSourceChanges, 'True']
+
 Mappings:
   EcsAmi:
     us-east-1:
@@ -165,7 +168,7 @@ Resources:
               Configuration:
                 Owner: !Ref GitHubUserName
                 Repo: !Ref GitHubRepoName
-                PollForSourceChanges: !Ref PollForSourceChanges
+                PollForSourceChanges: !If [PollForSourceChanges, True, False]
                 Branch: !Ref GitHubBranchName
                 OAuthToken: !Ref GitHubOAuthToken
               RunOrder: 1
