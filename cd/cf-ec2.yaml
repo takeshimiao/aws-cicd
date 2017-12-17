@@ -17,7 +17,7 @@ Parameters:
     Type: String
   ASGInfo:
     Default: 't2.micro,2'
-    Description: >
+    Description: |
                   ASGInfo[0] => EC2 type,
                   ASGInfo[1] => Desire capacity in ASG,
     Type: CommaDelimitedList
@@ -248,7 +248,7 @@ Resources:
               mode: "000755"
               owner: root
               group: root
-              content: !Sub >
+              content: !Sub |
                 [secret]
                 var_name=${SecretName}
                 [aws]
@@ -291,7 +291,7 @@ Resources:
     Properties:
       DashboardName: !Sub ${AWS::StackName}-dashboard
       DashboardBody: !Sub
-        - >
+        - |
           {
             "widgets": [
               {
