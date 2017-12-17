@@ -25,7 +25,7 @@ There are few things need your notices and actions in your AWS account
 
 There are two more things need your actions in your GitHub account
   * Fork this repo to under your GitHub account
-  * Create a [valid OAuth token from GitHub](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/), we will use it in AWS Pipeline service. 
+  * Create a [valid OAuth token from GitHub](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/), we will use it in AWS CodePipeline service. 
 
 
 # Hands-on
@@ -37,6 +37,18 @@ Frankly to say, there are variety of technology combinations doing CI/CD on ever
 ## CI/CD with EC2 on AWS
 [Back to top](#content)
 
+### 0. Overview
+
+<img src="images/hands-on_01_cicd-w-ec2-overview_v01.PNG" width="600" height="400"/>
+
+We use AWS CodePipeline to pull commits from GitHub, build, test and deploy a standalone VPC and a very simple API service running within it, in AWS region us-east-1.
+
+The components are
+* Application load balancer
+* Two EC2 instances running behind the ALB
+* CloudWatch Alarm
+* SNS Topic for alarm mail
+* CloudWatch dashboard
 
 ### 1. Launch AWS CodePipeline
 [Back to top](#content)
@@ -45,8 +57,8 @@ Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec
 
 <a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://s3.amazonaws.com/aws-cicd-public/cf-ec2-cp.yaml" target="_blank" rel="noopener"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
 
-1. Fill up the parameters whom are empty
-2. Click next and next again
+1. Fill up the parameters whom are empty or you want to replace
+2. Click next, and next again
 3. Check all confirmation questions for access IAM resources
 4. Click create ChangeSet button
 5. Click execute and will bring you to [CloudFormation console](https://console.aws.amazon.com/cloudformation/home?region=us-east-1) automatically.
@@ -54,15 +66,15 @@ Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec
 
 You can see the progress of provisioning of CodePipline on AWS CloudFormation console. After provisioning status gets to `CREATE_COMPLETED`, pls go to [CodePipline console](https://console.aws.amazon.com/codepipeline/home?region=us-east-1#/dashboard) to find your first CodePipline project.
  
-Pls remember to `Confirm subscription` of two mails sent from AWS SNS topics in your mailbox, which is the email address you had written in CloudFormation.
+Pls remember to `Confirm subscription` of two mails sent from AWS SNS topics in your mailbox, which is the email address you had written and passed to CloudFormation.
 
 ### 2. AWS CodePipline should automatically trigger a build at first place
 [Back to top](#content)
 
-You can see the CodePipline project starts to trigger a build automatically in few minutes. Due to we set `PollForSourceChanges: True` in Source action.
+You can see the CodePipline project starts to trigger a build automatically in few minutes. Due to we set `PollForSourceChanges` to True at CloudFormation by default.
 
 
-After the service provisioning gets to `CREATE_COMPLETED`, you can get the endpoint FQDN at the row ALBDNSName in Output tab in AWS CloudFormation console. let's veirfy your build whether successfully !
+After the service provisioning gets to `CREATE_COMPLETED`, you can get the endpoint FQDN at the row ALBDNSName at Output tab in AWS CloudFormation console. let's veirfy your build whether successfully !
 
 ```bash
 curl http://<ALBDNSName>
@@ -114,7 +126,7 @@ curl http://<ALBDNSName>/healthcheck
 Hello World!
 ```
 
-This API is used by ALB and auto-scaling group, auto-scaling group will increase/decrease based on the responses of this API on every EC2 instance.
+This API is used by ALB and auto-scaling group, auto-scaling group will increase/decrease based on the responses of this API from every EC2 instance.
 
 The configuration order will be ALB -> Target group -> Auto-scaling group -> Auto-scaling group configuration -> EC2. You can get start on following doc.
 
@@ -127,7 +139,7 @@ In this hands-on we are using A/B deployment (create 2 new EC2s -> all healthche
 
 * http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-updatepolicy.html
 
-Take a look on [cf-ec2.yaml](cd/cf-ec2.yaml) for more details.
+Take a look on [cd/cf-ec2.yaml](cd/cf-ec2.yaml) for more details.
 
 #### 4.3 To use `AWS::CloudFormation::Init` instead of OpsWorks service
 
@@ -141,15 +153,19 @@ Actually, `AWS::CloudFormation::Init` is based on [cloud-init](https://cloudinit
 #### 4.4 sleep API
 
 ```bash
-curl http://<ALBDNSName>:8080/sleep/30
-sleep for 30 secs
+curl http://<ALBDNSName>:8080/sleep/20
+sleep for 20 secs
 ```
 
 This API is used to create a response latency (by seconds) of our service, to trigger the backend alarm.
 
-See the service alarm on [CloudWatch Alarm console](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#alarm:alarmFilter=inOk)
+* See the service alarm on [CloudWatch Alarm console](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#alarm:alarmFilter=inOk)
+* See the service dashboard on [CloudWatch Dashboard](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:)
+* See [cd/cf-ec2.yaml](cd/cf-ec2.yaml) for more details
 
-See the service dashboard on [CloudWatch Dashboard](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:)
+In this case, the alarm will send notification to a SNS topic and then to the topic subscriber, which is, an email address you provided at first place.
+
+The SNS Topic can send to various types of subscriber, for example, to the [Slack](https://medium.com/cohealo-engineering/how-set-up-a-slack-channel-to-be-an-aws-sns-subscriber-63b4d57ad3ea) and [PagerDuty](https://www.pagerduty.com/docs/guides/aws-cloudwatch-integration-guide/). 
 
 All these basic stuffs can be created by AWS CloudFormation
 
@@ -160,12 +176,26 @@ But actually, there are still more complicated usecases the CloudFormation can n
 
 * http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-cfn-customresource.html
 
-`AWS::CloudFormation::CustomResource` is actually a Lambda function extension plugged in CloudFormation service.
+`AWS::CloudFormation::CustomResource` is actually a Lambda function extension plugged in CloudFormation service, which can bring a flexible way to provision and configure our resources in CloudFormation
+
 
 #### 4.5 secret API
 
-TBD...
+```bash
+curl http://<ALBDNSName>/secret
+{"Name": "mysecret03", "Value": "mysecretonaws03"}
+```
+This API is trying to demo how we pass the secret data (e.g. database password, etc) in CI/CD. In this case, we encrypted and stored the secret data in SSM parameter store at first place. And try to load and decrypt the secret data in API code.
+ 
+How to use SSM parameter store
+* http://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html
 
+How to encrypt the data with `AWS::CloudFormation::CustomResource` and `AWS::KMS::Key`
+* [codepipelines/cf-ec2-cp.yaml](codepipelines/cf-ec2-cp.yaml) line#302 and #324
+ * [codepipelines/kms_encryption/main.py](codepipelines/kms_encryption/main.py)
+
+How to decrypt the data in code
+* [api/main.py](api/main.py) line#30 
 
 
 ### 5. Delete hands-on resources
@@ -177,8 +207,9 @@ Approve this action will keep to delete CloudFormation stacks `*-ec2` and `*-ec2
  
 2. Delete S3 bucket for CodePipeline artifacts
 
-Go to [S3 console](https://s3.console.aws.amazon.com/s3/home?region=us-east-1) and rm bucket: `*-cicd-test`
+Go to [S3 console](https://s3.console.aws.amazon.com/s3/home?region=us-east-1) and delete bucket: `*-cicd-test`
 
 3. Delete CodePipeline CloudFormation stack
-Go to [CloudFormation console](https://console.aws.amazon.com/cloudformation/home?region=us-east-1) and delete CodePipline stack (The stack name was given by you at start).
+
+Go to [CloudFormation console](https://console.aws.amazon.com/cloudformation/home?region=us-east-1) and delete CodePipeline stack (The stack name was given by you at first place).
 
