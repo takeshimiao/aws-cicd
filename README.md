@@ -40,11 +40,13 @@ Frankly to say, there are variety of technology combinations doing CI/CD on ever
 
 ### 0. Overview
 
-<img src="images/hands-on_01_cicd-w-ec2-overview_v01.PNG" width="800" height="400"/>
+<img src="images/hands-on_01_cicd-w-ec2-overview_v02.PNG" width="800" height="400"/>
 
 We use AWS CodePipeline to pull commits from GitHub, build, test and deploy a standalone VPC and a very simple API service running within it, in AWS region us-east-1.
 
 The components are
+* A standalone VPC
+  * public subnet * 2, private subnet * 2, NAT gateway * 2, S3 VPC endpoint * 1 
 * Application load balancer
 * Two EC2 instances running behind the ALB
 * CloudWatch Alarm
