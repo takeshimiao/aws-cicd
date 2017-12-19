@@ -156,7 +156,7 @@ Actually, `AWS::CloudFormation::Init` is based on [cloud-init](https://cloudinit
 #### 4.4 sleep API
 
 ```bash
-curl http://<ALBDNSName>:8080/sleep/20
+curl http://<ALBDNSName>/sleep/20
 sleep for 20 secs
 ```
 
