@@ -2,6 +2,7 @@
 Materials for AWS CICD workshop
 
 # Content
+* [Slides](#slides)
 * [Prerequisites](#prerequisites)
 * [Hands-on](hands-on)
   * [CI/CD with EC2 on AWS](#cicd-with-ec2-on-aws)
@@ -11,6 +12,13 @@ Materials for AWS CICD workshop
     * [3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline)
     * [4. Take a look at our RESTful API service](#4-take-a-look-at-our-restful-api-service)
     * [5. Delete hands-on resources](#5-delete-hands-on-resources)
+
+# Slides
+
+Here are the slides I used in the workshop
+
+  * [The CICD journey of SPN Infra., Coretech, Trendmico on AWS](https://www.slideshare.net/takeshi_miao/20171122-aws-usergrpcoretechspncicdawsv01/1)
+   
 
 # Prerequisites
 
@@ -33,8 +41,22 @@ There are two more things need your actions in your GitHub account
 
 I am trying to leverage as most managed services on AWS as I can, so I picked S3, [CodePipline](https://aws.amazon.com/codepipeline/), CodeBuild and CloudFormation as a foundation for our hands-on.    
 
-Frankly to say, there are variety of technology combinations doing CI/CD on every environment (In this case, is AWS), so my choices here may not be the most suitable for your needs, it simply plays as a quick start to bring you the overall concepts and a PoC to home. And I hope, it can help you an idea to tailor your own one. 
-
+Frankly to say, there are variety of technology combinations doing CI/CD on every environment (In this case, is AWS), so my choices here may not be the most suitable for your needs, it simply plays as a quick start to bring you the overall concepts and a PoC to home. And I hope, it can help you an idea to tailor your own one.
+ 
+## What really concerning about for your CICD infra. ?
+According to my experiences, whatever technology stacks you are using for building your CICD infra., I think there will be three aspects you should need to consider about are...
+* What CI server you are using to support your workflow ?
+  * In this case is CodePipline + CodeBuild
+  * Others may consider to use Jenkins or others CI SaaS services
+  
+* What tools you are using to support your CD (end-to-end from your running services to monitoring) ?
+  * In this case is CloudFormation
+  * Others may write a bunch of scripts to do their CD
+  
+* How to pass your configuration parameters (Non-secret and secret) to your CD ?
+  * In this case are CodePipeline + SSM parameter store 
+  * Others may use environment variables setting supported by CI server
+  
 ## CI/CD with EC2 on AWS
 [Back to top](#content)
 
