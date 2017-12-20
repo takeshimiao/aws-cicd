@@ -4,7 +4,7 @@ Materials for AWS CICD workshop
 # Content
 * [Slides](#slides)
 * [Prerequisites](#prerequisites)
-* [Hands-on](hands-on)
+* [Hands-on](#hands-on)
   * [CI/CD with EC2 on AWS](#cicd-with-ec2-on-aws)
     * [0. Overview](#0-overview)
     * [1. Launch AWS CodePipeline](#1-launch-aws-codepipeline)
