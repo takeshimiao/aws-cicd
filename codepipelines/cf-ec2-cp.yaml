@@ -3,32 +3,32 @@ Transform: AWS::Serverless-2016-10-31
 Description: CodePipeline for CI/CD with EC2 hands on
 Parameters:
   GitHubUserName:
-    Description: GitHub user name
+    Description: Your GitHub user name
     Type: String
   GitHubRepoName:
-    Description: GitHub repository name
+    Description: Your GitHub repository name
     Type: String
     Default: aws-cicd
   GitHubBranchName:
-    Description: GitHub branch name
+    Description: Your GitHub branch name
     Type: String
     Default: master
   GitHubOAuthToken:
-    Description: OAuth token for access GitHub
+    Description: Your OAuth token for access GitHub
     Type: String
     NoEcho: True
   NotificationEmail:
-    Description: Alarm email
+    Description: Your email address
     Type: String
   KeyName:
-    Description: SSH key for EC2
+    Description: Your SSH key for EC2
     Type: String
   AritifactsBucketName:
-    Description: A S3 bucke name for storing codepipelines related arfiacts
+    Description: 'DO NOT CHANGE: A S3 bucke name for storing codepipelines related arfiacts'
     Type: String
     Default: aws-cicd-public
   KMSEncryptionFunctionObjectKey:
-    Description: Object key for KMS Encryption function
+    Description: 'DO NOT CHANGE: Object key for KMS Encryption function'
     Type: String
     Default: kms_encryption.zip
   YourSecretName:
