@@ -290,6 +290,8 @@ Resources:
     DependsOn: ALB
     Properties:
       DashboardName: !Sub ${AWS::StackName}-dashboard
+      # an example for picking the same metric to two widgets in the same dashboard
+      # first is a normal metrics view, second is a alarm metrics view
       DashboardBody: !Sub
         - |
           {
@@ -311,13 +313,34 @@ Resources:
                   ],
                   "period": 60,
                   "stat": "p95",
-                  "region": "${Region}",
+                  "region": "${AWS::Region}",
                   "title": "ALB P95 Response time"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 12,
+                "y": 0,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "title": "${AlarmName}",
+                  "annotations": {
+                    "alarms": [
+                      "${AlarmARN}"
+                    ]
+                  },
+                  "view": "timeSeries",
+                  "stacked": false
                 }
               }
             ]
           }
-        - { ALBFullName: !GetAtt ALB.LoadBalancerFullName, Region: !Ref 'AWS::Region'}
+        - {
+            ALBFullName: !GetAtt ALB.LoadBalancerFullName,
+            AlarmName: !Ref ALBP95LatencyAlarm,
+            AlarmARN: !GetAtt ALBP95LatencyAlarm.Arn
+          }
 
 
 Outputs:
