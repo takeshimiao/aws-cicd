@@ -62,15 +62,17 @@ According to my experiences, whatever technology stacks you are using for buildi
 
 ### 0. Overview
 
-<img src="images/hands-on_01_cicd-w-ec2-overview_v02.PNG" width="800" height="400"/>
+<img src="images/hands-on_01_cicd-w-ec2-overview_v03.PNG" width="800" height="400"/>
 
 We use AWS CodePipeline to pull commits from GitHub, build, test and deploy a standalone VPC and a very simple API service running within it, in AWS region us-east-1.
 
 The components are
 * A standalone VPC
-  * public subnet * 2, private subnet * 2, NAT gateway * 2, S3 VPC endpoint * 1 
+  * public subnet * 2, private subnet * 2, NAT gateway * 2, S3 VPC endpoint * 1
+* An EC2 instance as bsation node
+  * You can login to this VPC via this bastion node
 * Application load balancer
-* Two EC2 instances running behind the ALB
+* Two EC2 instances running a very simple web app behind the ALB
 * CloudWatch Alarm
 * SNS Topic for alarm mail
 * CloudWatch dashboard
@@ -237,4 +239,19 @@ Go to [S3 console](https://s3.console.aws.amazon.com/s3/home?region=us-east-1) a
 3. Delete CodePipeline CloudFormation stack
 
 Go to [CloudFormation console](https://console.aws.amazon.com/cloudformation/home?region=us-east-1) and delete CodePipeline stack (The stack name was given by you at first place).
+
+
+# Tips
+
+## Sync your forked git repo
+
+```bash
+git remote add upstream https://github.com/takeshimiao/aws-cicd.git
+git fetch upstream
+git checkout master
+git merge upstream/master
+# you may need to fix the merge conflicts if any
+git push origin master
+```
+Reference: https://help.github.com/articles/syncing-a-fork/
 
