@@ -92,7 +92,7 @@ Resources:
           - Name: ARTIFACTS_BUCKET_NAME
             Value: !Ref ArtifactStoreBucket
           - Name: ARTIFACTS_OBJECT_KEY
-            Value: 'api/'
+            Value: 'api'
       Source:
         Type: CODEPIPELINE
       TimeoutInMinutes: 10

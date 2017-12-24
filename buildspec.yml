@@ -10,7 +10,8 @@ phases:
     commands:
       - echo run unittests on `date`
       - make test
-      - printenv
+      # output all env vars
+      #- printenv
   build:
     commands:
       - echo Build started on `date`
