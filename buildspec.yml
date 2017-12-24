@@ -15,6 +15,7 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
+      - ls /usr/local/lib/python2.7/site-packages/
       - >
         aws cloudformation package --template-file cd/cf-sl.yaml
         --s3-bucket ${ARTIFACTS_BUCKET_NAME} --s3-prefix ${ARTIFACTS_OBJECT_KEY}
