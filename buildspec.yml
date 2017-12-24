@@ -11,11 +11,11 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - make build dist
+      - make LIBS='bottle' build dist
   post_build:
     commands:
       - echo Build completed on `date`
-      - ls /usr/local/lib/python2.7/site-packages/
+      - ls /usr/local/lib/python2.7/site-packages/bottle-0.12.13-py2.7.egg
       - >
         aws cloudformation package --template-file cd/cf-sl.yaml
         --s3-bucket ${ARTIFACTS_BUCKET_NAME} --s3-prefix ${ARTIFACTS_OBJECT_KEY}
