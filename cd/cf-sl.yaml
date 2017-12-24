@@ -16,6 +16,10 @@ Parameters:
     Description: API Stage Name
     Type: String
     Default: prod
+  SleepValueErrorAlarmThreshold:
+    Description: Sleep function ValueError count threshold
+    Type: Number
+    Default: 1
 
 Globals:
   Function:
@@ -212,7 +216,7 @@ Resources:
           Protocol: email
       DisplayName: !Sub ${AWS::StackName}-Topic
 
-  ALBP95LatencyAlarm:
+  APIP95LatencyAlarm:
     DependsOn:
       - AlarmSNSTopic
       - Api
@@ -238,9 +242,49 @@ Resources:
       TreatMissingData: notBreaching
       Unit: Milliseconds
 
+  SleepFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${SleepFunction}
+
+  SleepFunctionValueErrorFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: SleepFunctionLogGroup
+    Properties:
+      LogGroupName: !Ref SleepFunctionLogGroup
+      FilterPattern: 'ValueError'
+      MetricTransformations:
+        -
+          MetricValue: 1
+          MetricNamespace: !Sub '/api/lambda/${SleepFunction}'
+          MetricName: ValueError
+
+  SleepValueErrorAlarm:
+    DependsOn:
+      - AlarmSNSTopic
+      - SleepFunctionValueErrorFilter
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: !Sub "Alarm for sleep function ValueError count > ${SleepValueErrorAlarmThreshold}"
+      Namespace: !Sub '/api/lambda/${SleepFunction}'
+      MetricName: ValueError
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: !Ref SleepValueErrorAlarmThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmSNSTopic
+      OKActions:
+        - !Ref AlarmSNSTopic
+      TreatMissingData: notBreaching
+      Unit: Count
+
   Dashboard:
     Type: AWS::CloudWatch::Dashboard
-    DependsOn: Api
+    DependsOn:
+      - Api
+      - SleepFunctionValueErrorFilter
     Properties:
       DashboardName: !Sub ${AWS::StackName}-dashboard
       DashboardBody: !Sub
@@ -269,10 +313,29 @@ Resources:
                   "region": "${AWS::Region}",
                   "title": "API P95 Response time"
                 }
+              },
+              {
+                "type": "metric",
+                "x": 12,
+                "y": 0,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "metrics": [
+                    [
+                      "/api/lambda/${SleepFunctionName}",
+                      "ValueError"
+                    ]
+                  ],
+                  "period": 60,
+                  "stat": "Sum",
+                  "region": "${AWS::Region}",
+                  "title": "Sleep API ValueError count"
+                }
               }
             ]
           }
-        - {'APIName': !Sub '${AWS::StackName}-api'}
+        - {'APIName': !Sub '${AWS::StackName}-api', 'SleepFunctionName': !Ref SleepFunction}
 
 Outputs:
   APIGatewayURL:
