@@ -35,7 +35,7 @@ distclean: clean
 build:
 	python setup.py build
 	bash -x build.sh $(PYTHON_CMD) $(LIB_DIR) $(LIBS)
-	pushd lambdas/; make build; popd
+	cd lambdas/; make build; cd ..
 
 .PHONY: dist
 dist:
