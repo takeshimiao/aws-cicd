@@ -11,14 +11,25 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - make dist
+      - make build dist
   post_build:
     commands:
       - echo Build completed on `date`
+      - aws cloudformation package --template-file cd/cf-sl.yaml \
+        --s3-bucket ${ARTIFACTS_BUCKET_NAME} --s3-prefix ${ARTIFACTS_OBJECT_KEY} \
+        --output-template-file cd/packaged-cf-sl.yaml
 artifacts:
   files:
+    # for ec2
     - dist/aws-cicd-0.1.0.tar.gz
     - cd/cf-vpc.yaml
     - cd/cf-vpc-dev-configs.json
     - cd/cf-ec2.yaml
     - cd/cf-ec2-dev-configs.json
+    # for api gateway
+    - dist/api_sleep-0.1.0.zip
+    - dist/api_secret-0.1.0.zip
+    - dist/api_home-0.1.0.zip
+    - dist/api_healthcheck-0.1.0.zip
+    - cd/packaged-cf-sl.yaml
+
