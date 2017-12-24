@@ -15,8 +15,9 @@ phases:
   post_build:
     commands:
       - echo Build completed on `date`
-      - aws cloudformation package --template-file cd/cf-sl.yaml |
-        --s3-bucket ${ARTIFACTS_BUCKET_NAME} --s3-prefix ${ARTIFACTS_OBJECT_KEY} |
+      - >
+        aws cloudformation package --template-file cd/cf-sl.yaml
+        --s3-bucket ${ARTIFACTS_BUCKET_NAME} --s3-prefix ${ARTIFACTS_OBJECT_KEY}
         --output-template-file cd/packaged-cf-sl.yaml
 artifacts:
   files:
