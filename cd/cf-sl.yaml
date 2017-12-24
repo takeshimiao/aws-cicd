@@ -5,17 +5,17 @@ Parameters:
   SecretName:
     Description: Secret name stored in SSM parameter store
     Type: String
-  ALBP95LatencyAlarmThreshold:
-    Description: p95 Latency alarm threshold (sec)
+  APIP95LatencyAlarmThreshold:
+    Description: p95 Latency alarm threshold (Milliseconds)
     Type: Number
-    Default: 10
-#  AlarmEmail:
-#    Description: Alarm email
-#    Type: String
-
-#  SecretName:
-#    Description: Secret name stored in SSM parameter store
-#    Type: String
+    Default: 10000
+  AlarmEmail:
+    Description: Alarm email
+    Type: String
+  APIStageName:
+    Description: API Stage Name
+    Type: String
+    Default: prod
 
 Globals:
   Function:
@@ -117,7 +117,8 @@ Resources:
   Api:
     Type: AWS::Serverless::Api
     Properties:
-      StageName: prod
+      Name: !Sub ${AWS::StackName}-api
+      StageName: !Ref APIStageName
       DefinitionBody:
         swagger: '2.0'
         info:
@@ -201,6 +202,77 @@ Resources:
                   description: home page OK
                   schema:
                     type: string
+
+  AlarmSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        -
+          Endpoint: !Ref AlarmEmail
+          Protocol: email
+      DisplayName: !Sub ${AWS::StackName}-Topic
+
+  ALBP95LatencyAlarm:
+    DependsOn:
+      - AlarmSNSTopic
+      - Api
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: !Sub "Alarm for API p95 latency > ${APIP95LatencyAlarmThreshold} Milliseconds"
+      Namespace: AWS/ApiGateway
+      MetricName: Latency
+      Dimensions:
+        - Name: ApiName
+          Value: !Sub ${AWS::StackName}-api
+        - Name: Stage
+          Value: !Ref APIStageName
+      ExtendedStatistic: p95
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: !Ref APIP95LatencyAlarmThreshold
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlarmSNSTopic
+      OKActions:
+        - !Ref AlarmSNSTopic
+      TreatMissingData: notBreaching
+      Unit: Milliseconds
+
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    DependsOn: Api
+    Properties:
+      DashboardName: !Sub ${AWS::StackName}-dashboard
+      DashboardBody: !Sub
+        - |
+          {
+            "widgets": [
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 0,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "metrics": [
+                    [
+                      "AWS/ApiGateway",
+                      "Latency",
+                      "ApiName",
+                      "${APIName}",
+                      "Stage",
+                      "${APIStageName}"
+                    ]
+                  ],
+                  "period": 60,
+                  "stat": "p95",
+                  "region": "${AWS::Region}",
+                  "title": "API P95 Response time"
+                }
+              }
+            ]
+          }
+        - {'APIName': !Sub '${AWS::StackName}-api'}
 
 Outputs:
   APIGatewayURL:
