@@ -62,8 +62,8 @@ while [ $# -ne 0 ]; do
         fi
     fi
     src_lib_dir=$work_dir/$lib
-    echo "cp lib:$src_lib_dir to lib_dir:$lib_dir"
-    cp -r $src_lib_dir $lib_dir/
+    echo "cp lib:${src_lib_dir}* to lib_dir:$lib_dir"
+    cp -r ${src_lib_dir}* $lib_dir/
     [ $? -ne 0 ] && echo "cp lib:$src_lib_dir to lib_dir:$lib_dir failed !" && exit 1
 done
 
