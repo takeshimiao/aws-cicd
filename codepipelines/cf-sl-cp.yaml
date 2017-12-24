@@ -20,9 +20,6 @@ Parameters:
   NotificationEmail:
     Description: Your email address
     Type: String
-  KeyName:
-    Description: Your SSH key for EC2
-    Type: String
   AritifactsBucketName:
     Description: 'DO NOT CHANGE: A S3 bucke name for storing codepipelines related arfiacts'
     Type: String

@@ -30,3 +30,4 @@ dist:
 .PHONY: test
 test:
 	aws cloudformation validate-template --template-body file://cf-ec2-cp.yaml
+	aws cloudformation validate-template --template-body file://cf-sl-cp.yaml
