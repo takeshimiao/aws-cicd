@@ -2,11 +2,9 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: A very simple RESTful API service based on API gateway + Lambda functions and CloudWatch monitorings
 Parameters:
-#  ServiceVersion:
-#    Description: API service version
-#    Type: String
-#    Default: 0.1.0
-
+  SecretName:
+    Description: Secret name stored in SSM parameter store
+    Type: String
   ALBP95LatencyAlarmThreshold:
     Description: p95 Latency alarm threshold (sec)
     Type: Number
@@ -25,14 +23,90 @@ Globals:
     Handler: main.handler
     Timeout: 20
 Resources:
+  HomeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../dist/api_home-0.1.0.zip
+      Policies: AWSLambdaVPCAccessExecutionRole
+      Events:
+        Home:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+            RestApiId: !Ref Api
+
+  SecretFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: KMSKeyDecryption
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action: kms:Decrypt
+                Resource: '*'
+        - PolicyName: SSMGetParameters
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource: '*'
+
+  SecretFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../dist/api_secret-0.1.0.zip
+      Role: !GetAtt SecretFunctionRole.Arn
+      Environment:
+        Variables:
+          SECRET_NAME: !Ref SecretName
+          REGION: !Ref AWS::Region
+      Events:
+        Secret:
+          Type: Api
+          Properties:
+            Path: /secret
+            Method: get
+            RestApiId: !Ref Api
+
+  SleepFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../dist/api_sleep-0.1.0.zip
+      Policies: AWSLambdaVPCAccessExecutionRole
+      Events:
+        Sleep:
+          Type: Api
+          Properties:
+            Path: /sleep/{secs}
+            Method: get
+            RestApiId: !Ref Api
+
   HealthCheckFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../dist/api_healthcheck-0.1.0.zip
       Policies: AWSLambdaVPCAccessExecutionRole
-#      Environment:
-#        Variables:
-#          TABLE_NAME: !Ref Table
       Events:
         HealthCheck:
           Type: Api
@@ -57,6 +131,28 @@ Resources:
         produces:
           - application/json
         paths:
+          '/sleep/{secs}':
+            get:
+              description: sleep API
+              produces:
+                - application/json
+              parameters:
+                - name: secs
+                  in: path
+                  required: true
+                  description: How long the api to sleep
+                  type: string
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                passthroughBehavior: "when_no_match"
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SleepFunction.Arn}/invocations
+              responses:
+                '200':
+                  description: Sleep response
+                  schema:
+                    type: string
           '/healthcheck':
             get:
               description: healthcheck for API services
@@ -71,6 +167,38 @@ Resources:
               responses:
                 '200':
                   description: healthcheck OK
+                  schema:
+                    type: string
+          '/secret':
+            get:
+              description: get secret info. API
+              produces:
+                - application/json
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                passthroughBehavior: "when_no_match"
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SecretFunction.Arn}/invocations
+              responses:
+                '200':
+                  description: healthcheck OK
+                  schema:
+                    type: string
+          '/':
+            get:
+              description: service home page
+              produces:
+                - application/json
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                passthroughBehavior: "when_no_match"
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HomeFunction.Arn}/invocations
+              responses:
+                '200':
+                  description: home page OK
                   schema:
                     type: string
 

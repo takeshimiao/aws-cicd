@@ -21,18 +21,22 @@ def sleep(secs):
 @get('/secret')
 def get_secret():
     import os
-    from base64 import b64decode
     parser = ConfigParser.RawConfigParser()
     p = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'conf', 'secret.ini')
     parser.read(p)
     region = parser.get('aws', 'region')
     var_name = parser.get('secret', 'var_name')
-    client = boto3.client('ssm', region_name=region)
-    response = client.get_parameter(Name=var_name, WithDecryption=False)
+
+    _get_secret(var_name, region)
+
+def _get_secret(secret_name, region_name):
+    client = boto3.client('ssm', region_name=region_name)
+    response = client.get_parameter(Name=secret_name, WithDecryption=False)
     secret = response['Parameter']['Value']
     # decrypt data here
-    secret = boto3.client('kms', region_name=region).decrypt(CiphertextBlob=b64decode(secret))['Plaintext']
-    return {'Name': var_name, 'Value': secret}
+    from base64 import b64decode
+    secret = boto3.client('kms', region_name=region_name).decrypt(CiphertextBlob=b64decode(secret))['Plaintext']
+    return {'Name': secret_name, 'Value': secret}
 
 
 @get('/')
