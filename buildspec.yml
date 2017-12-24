@@ -3,10 +3,11 @@ version: 0.2
 phases:
   install:
     commands:
-      - echo do nothing...
+      - echo run install on `date`
+      - apt-get install zip
   pre_build:
     commands:
-      - echo run unittests om `date`
+      - echo run unittests on `date`
       - make test
   build:
     commands:
