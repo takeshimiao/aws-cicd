@@ -234,7 +234,7 @@ Resources:
       Period: 60
       EvaluationPeriods: 1
       Threshold: !Ref APIP95LatencyAlarmThreshold
-      ComparisonOperator: GreaterThanThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
         - !Ref AlarmSNSTopic
       OKActions:
@@ -278,7 +278,6 @@ Resources:
       OKActions:
         - !Ref AlarmSNSTopic
       TreatMissingData: notBreaching
-      Unit: Count
 
   Dashboard:
     Type: AWS::CloudWatch::Dashboard

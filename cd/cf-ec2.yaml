@@ -277,7 +277,7 @@ Resources:
       Period: 60
       EvaluationPeriods: 1
       Threshold: !Ref ALBP95LatencyAlarmThreshold
-      ComparisonOperator: GreaterThanThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
       AlarmActions:
         - !Ref AlarmSNSTopic
       OKActions:
