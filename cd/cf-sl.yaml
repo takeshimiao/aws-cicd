@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: A very simple RESTful API service based on API gateway + Lambda functions and CloudWatch monitorings
+Parameters:
+#  ServiceVersion:
+#    Description: API service version
+#    Type: String
+#    Default: 0.1.0
+
+  ALBP95LatencyAlarmThreshold:
+    Description: p95 Latency alarm threshold (sec)
+    Type: Number
+    Default: 10
+#  AlarmEmail:
+#    Description: Alarm email
+#    Type: String
+
+#  SecretName:
+#    Description: Secret name stored in SSM parameter store
+#    Type: String
+
+Globals:
+  Function:
+    Runtime: python2.7
+    Handler: main.handler
+    Timeout: 20
+Resources:
+  HealthCheckFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../dist/api_healthcheck-0.1.0.zip
+      Policies: AWSLambdaVPCAccessExecutionRole
+#      Environment:
+#        Variables:
+#          TABLE_NAME: !Ref Table
+      Events:
+        HealthCheck:
+          Type: Api
+          Properties:
+            Path: /healthcheck
+            Method: get
+            RestApiId: !Ref Api
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      DefinitionBody:
+        swagger: '2.0'
+        info:
+          version: 1.0.0
+          title: Simple API services
+        basePath: /
+        schemes:
+          - https
+        consumes:
+          - application/json
+        produces:
+          - application/json
+        paths:
+          '/healthcheck':
+            get:
+              description: healthcheck for API services
+              produces:
+                - application/json
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                passthroughBehavior: "when_no_match"
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HealthCheckFunction.Arn}/invocations
+              responses:
+                '200':
+                  description: healthcheck OK
+                  schema:
+                    type: string
+
+Outputs:
+  APIGatewayURL:
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com/prod

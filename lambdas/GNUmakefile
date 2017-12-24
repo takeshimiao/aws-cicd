@@ -1,14 +1,14 @@
 TOP_DIR             = $(abspath .)
-LIB_DIR            ?= $(TOP_DIR)/build/lib
-LIBS                = bottle.py
-PYTHON_CMD          = python
 ARTIFACTS_DIR      ?= $(TOP_DIR)/dist
+DST_LIB_DIR        ?= $(TOP_DIR)/lib
+SRC_LIB_DIR        ?= $(TOP_DIR)/../build/lib
+VERSION				= $(shell egrep version ../setup.py | cut -d "'" -f 2)
 
 .PHONY: all
 all: help
 
 .PHONY: help
-help: debug
+help:
 	@echo "Usage: make [ TARGET ... ]";
 	@echo "";
 	@echo "TARGET:";
@@ -17,31 +17,17 @@ help: debug
 	@echo "  clean          - delete all generated files";
 	@echo "  distclean      - delete all generated files and caches";
 	@echo "  build          - build the artifacts";
-	@echo "  dist           - package the artifacts";
-	@echo "  test           - run unit tests";
 	@echo "";
 	@echo "Default TARGET is 'help'.";
 
 .PHONY: clean
 clean:
-	python setup.py clean -a
+	rm -rf $(DST_LIB_DIR)
 
 .PHONY: distclean
 distclean: clean
 	rm -rf $(ARTIFACTS_DIR)
-	rm -rf aws_cicd.egg-info
 
 .PHONY: build
 build:
-	python setup.py build
-	bash build.sh $(PYTHON_CMD) $(LIB_DIR) $(LIBS)
-	pushd lambdas/; make build; popd
-
-.PHONY: dist
-dist:
-	python setup.py sdist
-	cp lambdas/dist/* $(ARTIFACTS_DIR)/
-
-.PHONY: test
-test:
-	python setup.py test
+	bash build.sh $(SRC_LIB_DIR) $(DST_LIB_DIR) $(ARTIFACTS_DIR) $(VERSION)
