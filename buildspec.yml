@@ -4,11 +4,13 @@ phases:
   install:
     commands:
       - echo run install on `date`
-      - apt-get install zip
+      - apt-get update
+      - apt-get install -y zip
   pre_build:
     commands:
       - echo run unittests on `date`
       - make test
+      - printenv
   build:
     commands:
       - echo Build started on `date`
