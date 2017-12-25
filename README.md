@@ -11,7 +11,10 @@ Materials for AWS CICD workshop
     * [2. AWS CodePipline should automatically trigger a build at first place](#2-aws-codepipline-should-automatically-trigger-a-build-at-first-place)
     * [3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline)
     * [4. Take a look at our RESTful API service](#4-take-a-look-at-our-restful-api-service)
-    * [Delete hands-on resources](#delete-hands-on-resources)
+  * [CI/CD with API gateway + Lambda functions on AWS](#cicd-with-api-gateway-lambda-functions-on-aws)
+    * [0. Overview](#0-overview-1)
+    * [1. Launch AWS CodePipeline](#1-launch-aws-codepipeline-1)
+  * [Delete hands-on resources](#delete-hands-on-resources)
 
 # Slides
 
@@ -81,7 +84,7 @@ The components are
 * CloudWatch dashboard
 
 ### 1. Launch AWS CodePipeline
-[Back to top](#content)
+[Back to top](#content) | <a href="javascript:history.back()">Go Back</a>
 
 Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec2-cp.yaml](codepipelines/cf-ec2-cp.yaml)) in your AWS account.
 
@@ -251,6 +254,8 @@ The components are
 Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec2-cp.yaml](codepipelines/cf-ec2-cp.yaml)) in your AWS account.
 
 <a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://s3.amazonaws.com/aws-cicd-public/cf-sl-cp.yaml" target="_blank" rel="noopener"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
+Pls go to [hands-on#1-1. Launch AWS CodePipeline](#1-launch-aws-codepipeline) for reference
 
 ## Delete hands-on resources
 [Back to top](#content)
