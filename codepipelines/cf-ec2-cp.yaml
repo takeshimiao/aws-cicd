@@ -75,7 +75,9 @@ Resources:
 
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
-    DependsOn: CodeBuildServiceRole
+    DependsOn:
+      - CodeBuildServiceRole
+      - ArtifactStoreBucket
     Properties:
       Name: !Sub ${AWS::StackName}-codebuild
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
@@ -86,6 +88,12 @@ Resources:
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/python:2.7.12
         PrivilegedMode: False
+        # add this for serverless part in buildspec.yaml
+        EnvironmentVariables:
+          - Name: ARTIFACTS_BUCKET_NAME
+            Value: !Ref ArtifactStoreBucket
+          - Name: ARTIFACTS_OBJECT_KEY
+            Value: 'api'
       Source:
         Type: CODEPIPELINE
       TimeoutInMinutes: 10
