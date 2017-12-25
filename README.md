@@ -345,6 +345,7 @@ Go to [CloudFormation console](https://console.aws.amazon.com/cloudformation/hom
 
 
 # Tips
+[Back to top](#content)
 
 ## Sync your forked git repo
 
