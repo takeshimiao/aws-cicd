@@ -14,7 +14,12 @@ Materials for AWS CICD workshop
   * [CI/CD with API gateway + Lambda functions on AWS](#cicd-with-api-gateway-lambda-functions-on-aws)
     * [0. Overview](#0-overview-1)
     * [1. Launch AWS CodePipeline](#1-launch-aws-codepipeline-1)
+    * [2. AWS CodePipline should automatically trigger a build at first place](#2-aws-codepipline-should-automatically-trigger-a-build-at-first-place-1)
+    * [3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline-1)
+    * [4. Take a look at our RESTful API service](#4-take-a-look-at-our-restful-api-service-1)
   * [Delete hands-on resources](#delete-hands-on-resources)
+* [Tips](#tips)
+  * [Sync your forked git repo](#sync-your-forked-git-repo)
 
 # Slides
 
@@ -84,7 +89,7 @@ The components are
 * CloudWatch dashboard
 
 ### 1. Launch AWS CodePipeline
-[Back to top](#content) | <a href="javascript:history.back()">Go Back</a>
+[Back to top](#content)
 
 Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec2-cp.yaml](codepipelines/cf-ec2-cp.yaml)) in your AWS account.
 
@@ -104,7 +109,7 @@ Pls remember to `Confirm subscription` of two mails sent from AWS SNS topics in 
 ### 2. AWS CodePipline should automatically trigger a build at first place
 [Back to top](#content)
 
-You can see the CodePipline project starts to trigger a build automatically in few minutes. Due to we set `PollForSourceChanges` to True at CloudFormation by default.
+You can see the CodePipline project starts to trigger a build automatically in few minutes. Due to the CodePipeline will pull repo at first time.
 
 
 After the service provisioning gets to `CREATE_COMPLETED`, you can get the endpoint FQDN at the row ALBDNSName at Output tab in AWS CloudFormation console. let's veirfy your build whether successfully !
@@ -168,7 +173,7 @@ The configuration order will be ALB -> Target group -> Auto-scaling group -> Aut
 
 #### 4.2 What will happen if we want to update/deploy our new codes to existing service ?
 
-In this hands-on we are using A/B deployment (create 2 new EC2s -> all healthchek passed -> delete 2 old EC2s), the details in following doc
+In this hands-on we are using Blue/Green deployment (create 2 new EC2s -> all healthchek passed -> delete 2 old EC2s), the details in following doc
 
 * http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-updatepolicy.html
 
@@ -228,7 +233,7 @@ How to encrypt the data with `AWS::CloudFormation::CustomResource` and `AWS::KMS
  * [codepipelines/kms_encryption/main.py](codepipelines/kms_encryption/main.py)
 
 How to decrypt the data in code
-* [api/main.py](api/main.py) line#30 
+* [api/main.py](api/main.py) line#30
 
 
 ## CI/CD with API gateway + Lambda functions on AWS
@@ -256,6 +261,72 @@ Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec
 <a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://s3.amazonaws.com/aws-cicd-public/cf-sl-cp.yaml" target="_blank" rel="noopener"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
 
 Pls go to [hands-on#1-1. Launch AWS CodePipeline](#1-launch-aws-codepipeline) for reference
+
+### 2. AWS CodePipline should automatically trigger a build at first place
+[Back to top](#content)
+
+You can see the CodePipline project starts to trigger a build automatically in few minutes. Due to the CodePipeline will pull repo at first time.
+
+
+After the service provisioning gets to `CREATE_COMPLETED`, you can get the endpoint FQDN at the row APIGatewayURL at Output tab in AWS CloudFormation console. let's veirfy your build whether successfully !
+
+```bash
+curl <APIGatewayURL>
+Welcome to my home
+```
+
+The very simple API impl. is still based on [api/main.py](api/main.py), but every API is actually constructed by Lambda functions([lambdas/](lambdas/)), you can take a look if interested in.
+
+### 3. Take a look at every component in the overall CodePipeline
+[Back to top](#content)
+
+You can see more details in [cf-sl-cp.yaml](codepipelines/cf-sl-cp.yaml)
+
+Pls go to [hands-on#1-3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline) for reference.
+
+### 4. Take a look at our RESTful API service
+[Back to top](#content)
+
+The very simple API impl. is still based on [api/main.py](api/main.py), but every API is actually constructed by Lambda functions([lambdas/](lambdas/)), you can take a look if interested in.
+
+We are using CloudFormation W/ serverless application model(SAM) to deploy our overall resources including API gateway, Lambda functions, and others.
+* https://github.com/awslabs/serverless-application-model
+
+We basically don't need to care about the operations and scaling related issues for underlying resources due to AWS serverless architecture is taking about them for us. But the world is not perfect, there are still some issues we need to care about...for example, cold start issue, etc. Pls refer to slides (#TODO) for details
+
+
+#### 4.1 healthcheck API
+
+```bash
+curl <APIGatewayURL>/healthcheck
+Hello World!
+```
+
+This API originally used by ALB + EC2 architecture, it is useless for serverless architecture.
+
+#### 4.2 What will happen if we want to update/deploy our new codes to existing service ?
+
+We are using SAM to deploy/update our API gateway and Lambda function resources, but there is actually a drawback for SAM model...which is...it replaces our underlying API gateway deployment and/or Lambda functions in place (depends on what resource you changed). It will impact our API availability in a very short of time, so you need to consider this issue whether break your SLA. Pls refer to slides (#TODO) for more details.
+
+Take a look on [cd/cf-sl.yaml](cd/cf-sl.yaml) for more details.
+
+#### 4.3 sleep API
+Pls go to [hands-on#1-4.4 sleep API](#44-sleep-api) for reference.
+
+I also enhanced a new testcase for this API, which is.
+
+```bash
+curl <APIGatewayURL>/sleep/hello
+{"message": "Internal server error"}
+```
+
+This error will trigger an alarm and also will shown in dashboard. I created a custom metric from CloudWatch Log Group storing the log messages generated from Sleep Lambda function, and then create an alarm and dashboard widget based on this custom metric. Pls refer to [cd/cf-sl.yaml#L245](cd/cf-sl.yaml#L245) for more details.
+* http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html
+* http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-metricfilter.html
+
+#### 4.4 secret API
+
+Pls go to [hands-on#1-4.5 secret API](#45-secret-api) for reference.
 
 ## Delete hands-on resources
 [Back to top](#content)
