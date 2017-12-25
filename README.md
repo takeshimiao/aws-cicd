@@ -11,7 +11,7 @@ Materials for AWS CICD workshop
     * [2. AWS CodePipline should automatically trigger a build at first place](#2-aws-codepipline-should-automatically-trigger-a-build-at-first-place)
     * [3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline)
     * [4. Take a look at our RESTful API service](#4-take-a-look-at-our-restful-api-service)
-  * [CI/CD with API gateway + Lambda functions on AWS](#cicd-with-api-gateway-lambda-functions-on-aws)
+  * [CI/CD with API gateway + Lambda functions on AWS](#cicd-with-api-gateway--lambda-functions-on-aws)
     * [0. Overview](#0-overview-1)
     * [1. Launch AWS CodePipeline](#1-launch-aws-codepipeline-1)
     * [2. AWS CodePipline should automatically trigger a build at first place](#2-aws-codepipline-should-automatically-trigger-a-build-at-first-place-1)
@@ -333,7 +333,9 @@ Pls go to [hands-on#1-4.5 secret API](#45-secret-api) for reference.
 
 1. Approve `ApproveForDeletion` action in CodePipeline
 
-Approve this action will keep to delete CloudFormation stacks `*-ec2` and `*-ec2-vpc`
+Approve this action will keep to delete CloudFormation stacks 
+* `*-ec2` and `*-ec2-vpc` for hands-on#1
+* `*-sl` for hands-on#2
  
 2. Delete S3 bucket for CodePipeline artifacts
 
