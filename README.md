@@ -11,14 +11,17 @@ Materials for AWS CICD workshop
     * [2. AWS CodePipline should automatically trigger a build at first place](#2-aws-codepipline-should-automatically-trigger-a-build-at-first-place)
     * [3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline)
     * [4. Take a look at our RESTful API service](#4-take-a-look-at-our-restful-api-service)
-    * [5. Delete hands-on resources](#5-delete-hands-on-resources)
+    * [Delete hands-on resources](#delete-hands-on-resources)
 
 # Slides
 
 Here are the slides I used in the workshop
 
-  * [The CICD journey of SPN Infra., Coretech, Trendmico on AWS](https://www.slideshare.net/takeshi_miao/20171122-aws-usergrpcoretechspncicdawsv01/1)
-   
+  * The CICD journey of SPN Infra., Coretech, Trendmico on AWS
+    * [slides](https://www.slideshare.net/takeshi_miao/20171122-aws-usergrpcoretechspncicdawsv01/1)
+  * Building CI/CD Pipelines for Serverless Applications - SRV302 - re:Invent 2017
+    * [slides](https://www.slideshare.net/AmazonWebServices/building-cicd-pipelines-for-serverless-applications-srv302-reinvent-2017)
+    * [Video](https://www.youtube.com/watch?v=dCDZ7HR7dms)
 
 # Prerequisites
 
@@ -225,7 +228,31 @@ How to decrypt the data in code
 * [api/main.py](api/main.py) line#30 
 
 
-### 5. Delete hands-on resources
+## CI/CD with API gateway + Lambda functions on AWS
+[Back to top](#content)
+
+### 0. Overview
+
+<img src="images/hands-on_02_cicd-w-apiGateway_v01.PNG" width="800" height="400"/>
+
+We use AWS CodePipeline to pull commits from GitHub, build, test and deploy an API gateway and multiple Lambda functions behind it, in AWS region us-east-1.
+
+The components are
+* An API gateway
+  * Multiple Lambda functions exposing our very simple API services
+* A custom metric generated from a Lambda function logs
+* CloudWatch Alarm
+* SNS Topic for alarm mail
+* CloudWatch dashboard
+
+### 1. Launch AWS CodePipeline
+[Back to top](#content)
+
+Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec2-cp.yaml](codepipelines/cf-ec2-cp.yaml)) in your AWS account.
+
+<a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://s3.amazonaws.com/aws-cicd-public/cf-sl-cp.yaml" target="_blank" rel="noopener"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
+## Delete hands-on resources
 [Back to top](#content)
 
 1. Approve `ApproveForDeletion` action in CodePipeline
