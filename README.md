@@ -30,6 +30,8 @@ Here are the slides I used in the workshop
   * Building CI/CD Pipelines for Serverless Applications - SRV302 - re:Invent 2017
     * [slides](https://www.slideshare.net/AmazonWebServices/building-cicd-pipelines-for-serverless-applications-srv302-reinvent-2017)
     * [Video](https://www.youtube.com/watch?v=dCDZ7HR7dms)
+  * My thoughts for - Building CI/CD Pipelines for Serverless Applications sharing
+    * [slides](https://www.slideshare.net/takeshi_miao/my-thoughts-for-building-cicd-pipelines-for-serverless-applications-sharing)
 
 # Prerequisites
 [Back to top](#content)
@@ -294,7 +296,7 @@ The very simple API impl. is still based on [api/main.py](api/main.py), but ever
 We are using CloudFormation W/ serverless application model(SAM) to deploy our overall resources including API gateway, Lambda functions, and others.
 * https://github.com/awslabs/serverless-application-model
 
-We basically don't need to care about the operations and scaling related issues for underlying resources due to AWS serverless architecture is taking about them for us. But the world is not perfect, there are still some issues we need to care about...for example, cold start issue, etc. Pls refer to slides (#TODO) for details
+We basically don't need to care about the operations and scaling related issues for underlying resources due to AWS serverless architecture is taking about them for us. But the world is not perfect, there are still some issues we need to care about...for example, cold start issue, etc. Pls refer to [slides](https://www.slideshare.net/takeshi_miao/my-thoughts-for-building-cicd-pipelines-for-serverless-applications-sharing),p#5 for details
 
 
 #### 4.1 healthcheck API
@@ -308,7 +310,7 @@ This API originally used by ALB + EC2 architecture, it is useless for serverless
 
 #### 4.2 What will happen if we want to update/deploy our new codes to existing service ?
 
-We are using SAM to deploy/update our API gateway and Lambda function resources, but there is actually a drawback for SAM model...which is...it replaces our underlying API gateway deployment and/or Lambda functions in place (depends on what resource you changed). It will impact our API availability in a very short of time, so you need to consider this issue whether break your SLA. Pls refer to slides (#TODO) for more details.
+We are using SAM to deploy/update our API gateway and Lambda function resources, but there is actually a drawback for SAM model...which is...it replaces our underlying API gateway deployment and/or Lambda functions in place (depends on what resource you changed). It will impact our API availability in a very short of time, so you need to consider this issue whether break your SLA. Pls refer to [slides](https://www.slideshare.net/takeshi_miao/my-thoughts-for-building-cicd-pipelines-for-serverless-applications-sharing),p#4 for more details.
 
 Take a look on [cd/cf-sl.yaml](cd/cf-sl.yaml) for more details.
 
