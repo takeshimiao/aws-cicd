@@ -27,7 +27,7 @@ def get_secret():
     region = parser.get('aws', 'region')
     var_name = parser.get('secret', 'var_name')
 
-    _get_secret(var_name, region)
+    return _get_secret(var_name, region)
 
 def _get_secret(secret_name, region_name):
     client = boto3.client('ssm', region_name=region_name)
