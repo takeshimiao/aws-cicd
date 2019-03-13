@@ -27,11 +27,9 @@ Here are the slides I used in the workshop
 
   * The CICD journey of SPN Infra., Coretech, Trendmico on AWS
     * [slides](https://www.slideshare.net/takeshi_miao/20171122-aws-usergrpcoretechspncicdawsv01/1)
-  * Building CI/CD Pipelines for Serverless Applications - SRV302 - re:Invent 2017
-    * [slides](https://www.slideshare.net/AmazonWebServices/building-cicd-pipelines-for-serverless-applications-srv302-reinvent-2017)
-    * [Video](https://www.youtube.com/watch?v=dCDZ7HR7dms)
-  * My thoughts for - Building CI/CD Pipelines for Serverless Applications sharing
-    * [slides](https://www.slideshare.net/takeshi_miao/my-thoughts-for-building-cicd-pipelines-for-serverless-applications-sharing)
+  * CI/CD for Serverless and Containerized Applications (DEV309-R1) - AWS re:Invent 2018
+    * [slides](https://www.slideshare.net/AmazonWebServices/cicd-for-serverless-and-containerized-applications-dev309r1-aws-reinvent-2018)
+    * [Video](https://www.youtube.com/watch?v=01ewawuL-IY)
 
 # Prerequisites
 [Back to top](#content)
