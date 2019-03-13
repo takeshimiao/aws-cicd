@@ -47,7 +47,7 @@ There are few things need your notices and actions in your AWS account
 There are two more things need your actions in your GitHub account
   * Fork this repo to under your GitHub account
   * Create a [valid OAuth token from GitHub](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/), we will use it in AWS CodePipeline service. 
-
+<img src="images/prep_03_oauth-configs.png" width="800" height="400"/>
 
 # Hands-on
 [Back to top](#content)
@@ -332,6 +332,8 @@ Pls go to [hands-on#1-4.5 secret API](#45-secret-api) for reference.
 
 ## Delete hands-on resources
 [Back to top](#content)
+
+**NOTICE**: Pls delete the resources one by one according to the following steps. Otherwise, there would be deletion errors occuring for CloudFormation stacks.
 
 1. Approve `ApproveForDeletion` action in CodePipeline
 
