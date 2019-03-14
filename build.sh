@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 cur_dir=$(dirname $0)
 cur_dir=$(cd ${cur_dir}; pwd)
