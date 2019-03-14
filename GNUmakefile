@@ -1,6 +1,6 @@
 TOP_DIR             = $(abspath .)
 LIB_DIR            ?= $(TOP_DIR)/build/lib
-LIBS                = bottle.py
+LIBS                = bottle
 PYTHON_CMD          = python
 ARTIFACTS_DIR      ?= $(TOP_DIR)/dist
 
@@ -8,7 +8,7 @@ ARTIFACTS_DIR      ?= $(TOP_DIR)/dist
 all: help
 
 .PHONY: help
-help: debug
+help:
 	@echo "Usage: make [ TARGET ... ]";
 	@echo "";
 	@echo "TARGET:";
