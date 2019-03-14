@@ -162,6 +162,8 @@ Resources:
       Stages:
         -
           Name: Source
+          # For valid category and provider mappings, pls refer to...
+          # https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#actions-valid-providers
           Actions:
             -
               Name: Source
@@ -173,6 +175,8 @@ Resources:
               OutputArtifacts:
                 -
                   Name: MyApp
+              # For valid configuration settings for corresponding provider, pls refer to...
+              # https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#structure-configuration-examples
               Configuration:
                 Owner: !Ref GitHubUserName
                 Repo: !Ref GitHubRepoName
