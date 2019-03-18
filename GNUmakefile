@@ -41,6 +41,7 @@ build:
 dist:
 	python setup.py sdist
 	cp lambdas/dist/* $(ARTIFACTS_DIR)/
+	pushd docker; sh build.sh; popd
 
 .PHONY: test
 test:
