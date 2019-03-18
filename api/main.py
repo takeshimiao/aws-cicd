@@ -18,16 +18,27 @@ def sleep(secs):
     time.sleep(float(secs))
     return 'sleep for {} secs'.format(secs)
 
+_SECRET_NAME = 'SECRET_NAME'
+_REGION = 'REGION'
+
 @get('/secret')
 def get_secret():
+    region = None
+    secret = None
     import os
-    parser = ConfigParser.RawConfigParser()
-    p = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'conf', 'secret.ini')
-    parser.read(p)
-    region = parser.get('aws', 'region')
-    var_name = parser.get('secret', 'var_name')
+    # get parms from env vars first
+    if _SECRET_NAME in os.environ:
+        secret = os.environ[_SECRET_NAME]
+        region = os.environ[_REGION]
+    else:
+        # otherwise, get from secret.ini
+        parser = ConfigParser.RawConfigParser()
+        p = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'conf', 'secret.ini')
+        parser.read(p)
+        region = parser.get('aws', 'region')
+        secret = parser.get('secret', 'var_name')
 
-    return _get_secret(var_name, region)
+    return _get_secret(secret, region)
 
 def _get_secret(secret_name, region_name):
     client = boto3.client('ssm', region_name=region_name)
