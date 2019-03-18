@@ -12,7 +12,7 @@ WORKDIR /app
 COPY app /app
 
 
-ENV SECRET_NAME mysecret
-ENV REGION us-east-1
+ENV SECRET_NAME mysecret_from_docker
+ENV REGION us-east-1_from_docker
 
 ENTRYPOINT ["python", "aws-cicd/api/main.py"]
