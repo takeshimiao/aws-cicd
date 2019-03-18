@@ -20,10 +20,20 @@ phases:
     commands:
       - echo Build completed on `date`
       # for api gateway
+      # generate a packaged-cf-sl.yaml for deployment later
       - >
         aws cloudformation package --template-file cd/cf-sl.yaml
         --s3-bucket ${ARTIFACTS_BUCKET_NAME} --s3-prefix ${ARTIFACTS_OBJECT_KEY}
         --output-template-file cd/packaged-cf-sl.yaml
+      # for dcoker image
+      # push to ecr
+      - $(aws ecr get-login --no-include-email)
+      - aws ecr describe-repositories --repository-names $ECR_REPO_NAME --query repositories[0].repositoryUri --output text > /tmp/ecr_repo.txt
+      - docker tag aws-cicd:0.1.0 $(cat /tmp/ecr_repo.txt):0.1.0
+      - docker push $(cat /tmp/ecr_repo.txt):0.1.0
+      - docker tag aws-cicd:latest $(cat /tmp/ecr_repo.txt):latest
+      - docker push $(cat /tmp/ecr_repo.txt):latest
+
 artifacts:
   files:
     # for ec2
