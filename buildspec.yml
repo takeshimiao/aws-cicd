@@ -15,7 +15,7 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - make LIBS='bottle' build dist
+      - make LIBS='bottle' LIB_DIR="$PWD/build/lib.linux-x86_64-2.7" build dist
   post_build:
     commands:
       - echo Build completed on `date`
