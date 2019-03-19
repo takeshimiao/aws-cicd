@@ -1,0 +1,345 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: A very simple RESTful API service based on ALB with EC2 service and CloudWatch monitorings
+Parameters:
+  InfraStackName:
+    Description: CF Infra. stack name
+    Type: String
+  ALBP95LatencyAlarmThreshold:
+    Description: p95 Latency alarm threshold (sec)
+    Type: Number
+    Default: 10
+  AlarmEmail:
+    Description: Alarm email
+    Type: String
+  SecretName:
+    Description: Secret name stored in SSM parameter store
+    Type: String
+  ServiceName:
+    Type: String
+    Default: SimpleApi
+    Description: A name for the service
+  ContainerPort:
+    Type: Number
+    Default: 8080
+    Description: What port number the application inside the docker container is binding to
+  ContainerCpu:
+    Type: Number
+    Default: 256
+    Description: How much CPU to give the container. 1024 is 1 CPU
+  ContainerMemory:
+    Type: Number
+    Default: 512
+    Description: How much memory in megabytes to give the container
+  ContainerVersion:
+    Type: String
+    Default: 0.1.0
+    Description: Container image version
+  ContainerDesiredCount:
+    Type: Number
+    Default: 2
+    Description: How many copies of the service task to run
+  EcrRepoUrl:
+    Type: String
+    Description: ECS repo URL
+
+Resources:
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub "${InfraStackName}-VPC1"
+      GroupDescription: Rules for making connection with ALB
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIpv6: "::/0"
+      Tags:
+      - Key: Name
+        Value: !Sub 'alb-securitygroup'
+
+  ECSTaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: ALBSecurityGroup
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub "${InfraStackName}-VPC1"
+      GroupDescription: Rules for making connection with EC2
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: !Ref ContainerPort
+          ToPort: !Ref ContainerPort
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Tags:
+      - Key: Name
+        Value: !Sub 'ecs-task-securitygroup'
+
+  ECSTaskSecurityGroupIngressFromSelf:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from other containers in the same security group
+      GroupId: !Ref ECSTaskSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref ECSTaskSecurityGroup
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DependsOn: ALBSecurityGroup
+    Properties:
+      Name: !Sub 'ecs-alb' # cannot > 32 char
+      Type: application
+      Scheme: internet-facing
+      Subnets:
+          - Fn::ImportValue: !Sub "${InfraStackName}-VPC1PublicSubnet1"
+          - Fn::ImportValue: !Sub "${InfraStackName}-VPC1PublicSubnet2"
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - { Key: Name, Value: !Sub 'ecs-alb' }
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /healthcheck
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      TargetType: ip
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      VpcId:
+        Fn::ImportValue: !Sub "${InfraStackName}-VPC1"
+      Tags:
+        - { Key: Name, Value: !Sub 'ecs-targetgroup' }
+
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - ALB
+      - ALBTargetGroup
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+
+  # This is a role which is used by the ECS tasks themselves.
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: AmazonECSTaskExecutionRolePolicy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            # Allow the ECS Tasks to download images from ECR
+            - 'ecr:GetAuthorizationToken'
+            - 'ecr:BatchCheckLayerAvailability'
+            - 'ecr:GetDownloadUrlForLayer'
+            - 'ecr:BatchGetImage'
+
+            # Allow the ECS tasks to upload logs to CloudWatch
+            - 'logs:CreateLogStream'
+            - 'logs:PutLogEvents'
+            Resource: '*'
+
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      #      ManagedPolicyArns:
+      #        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+      Policies:
+      - PolicyName: KMSKeyDecryption
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action: kms:Decrypt
+            Resource: '*'
+      - PolicyName: SSMGetParameters
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - ssm:GetParameter
+            - ssm:GetParameters
+            Resource: '*'
+
+  # The task definition. This is a simple metadata description of what
+  # container to run, and what resource requirements it has.
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Ref 'ServiceName'
+      Cpu: !Ref 'ContainerCpu'
+      Memory: !Ref 'ContainerMemory'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+      - FARGATE
+      ExecutionRoleArn: !Ref ECSTaskExecutionRole
+      TaskRoleArn: !Ref ECSTaskRole
+      ContainerDefinitions:
+      - Name: !Ref ServiceName
+        Cpu: !Ref ContainerCpu
+        Memory: !Ref ContainerMemory
+        Image: !Sub '${EcrRepoUrl}:${ContainerVersion}'
+        PortMappings:
+        - ContainerPort: !Ref ContainerPort
+        Environment:
+          -
+            Name: SECRET_NAME
+            Value: !Ref SecretName
+          -
+            Name: REGION
+            Value: !Ref AWS::Region
+
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+
+  # The service. The service is a resource which allows you to run multiple
+  # copies of a type of task, and gather up their logs and metrics, as well
+  # as monitor the number of running tasks and replace any that have crashed
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: ALBListener
+    Properties:
+      ServiceName: !Ref ServiceName
+      Cluster: !Ref ECSCluster
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: !Ref ContainerDesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref ECSTaskSecurityGroup
+            - Fn::ImportValue: !Sub "${InfraStackName}-CommonSecurityGroup"
+          Subnets:
+            - Fn::ImportValue: !Sub "${InfraStackName}-VPC1PrivateSubnet1"
+            - Fn::ImportValue: !Sub "${InfraStackName}-VPC1PrivateSubnet2"
+      TaskDefinition: !Ref TaskDefinition
+      LoadBalancers:
+      - ContainerName: !Ref ServiceName
+        ContainerPort: !Ref ContainerPort
+        TargetGroupArn: !Ref ALBTargetGroup
+
+  AlarmSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        -
+          Endpoint: !Ref AlarmEmail
+          Protocol: email
+      DisplayName: !Sub ${AWS::StackName}-Topic
+
+  ALBP95LatencyAlarm:
+    DependsOn: AlarmSNSTopic
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: !Sub "Alarm for ALB p95 latency > ${ALBP95LatencyAlarmThreshold} secs"
+      Namespace: AWS/ApplicationELB
+      MetricName: TargetResponseTime
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !GetAtt ALB.LoadBalancerFullName
+      ExtendedStatistic: p95
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: !Ref ALBP95LatencyAlarmThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmSNSTopic
+      OKActions:
+        - !Ref AlarmSNSTopic
+      TreatMissingData: notBreaching
+      Unit: Seconds
+
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    DependsOn: ALB
+    Properties:
+      DashboardName: !Sub ${AWS::StackName}-dashboard
+      # an example for picking the same metric to two widgets in the same dashboard
+      # first is a normal metrics view, second is a alarm metrics view
+      DashboardBody: !Sub
+        - |
+          {
+            "widgets": [
+              {
+                "type": "metric",
+                "x": 0,
+                "y": 0,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "metrics": [
+                    [
+                      "AWS/ApplicationELB",
+                      "TargetResponseTime",
+                      "LoadBalancer",
+                      "${ALBFullName}"
+                    ]
+                  ],
+                  "period": 60,
+                  "stat": "p95",
+                  "region": "${AWS::Region}",
+                  "title": "ALB P95 Response time"
+                }
+              },
+              {
+                "type": "metric",
+                "x": 12,
+                "y": 0,
+                "width": 12,
+                "height": 6,
+                "properties": {
+                  "title": "${AlarmName}",
+                  "annotations": {
+                    "alarms": [
+                      "${AlarmARN}"
+                    ]
+                  },
+                  "view": "timeSeries",
+                  "stacked": false
+                }
+              }
+            ]
+          }
+        - {
+            ALBFullName: !GetAtt ALB.LoadBalancerFullName,
+            AlarmName: !Ref ALBP95LatencyAlarm,
+            AlarmARN: !GetAtt ALBP95LatencyAlarm.Arn
+          }
+
+
+Outputs:
+  ALBDNSName:
+    Description: ALB DNS name
+    Value: !GetAtt ALB.DNSName

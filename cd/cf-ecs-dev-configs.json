@@ -1,0 +1,7 @@
+{
+  "Parameters" : {
+    "InfraStackName" : "vpc-ecs-01",
+    "ContainerVersion" : "0.1.0",
+    "EcrRepoUrl" : "Will be overridden by EcrRepoUrl"
+  }
+}
