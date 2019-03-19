@@ -208,46 +208,65 @@ Resources:
 #        -
 #          Name: Deploy
 #          Actions:
-#            -
-#              Name: CreateChangeSet
-#              InputArtifacts:
-#                -
-#                  Name: MyAppBuild
-#              ActionTypeId:
-#                Category: Deploy
-#                Owner: AWS
-#                Version: 1
-#                Provider: CloudFormation
-#              Configuration:
-#                ActionMode : CHANGE_SET_REPLACE
-#                RoleArn : !GetAtt CloudFormationServiceRole.Arn
-#                Capabilities : CAPABILITY_IAM
-#                ChangeSetName : !Sub ${AWS::StackName}-sl-changeset
-#                StackName: !Sub ${AWS::StackName}-sl
-#                TemplatePath : MyAppBuild::cd/packaged-cf-sl.yaml
-#                ParameterOverrides: !Sub |
-#                  {
-#                    "AlarmEmail": "${NotificationEmail}",
-#                    "SecretName" : "${YourSecretName}"
-#                  }
-#              RunOrder: 1
-#            -
-#              Name: ExecuteChangeSet
-#              InputArtifacts:
-#                -
-#                  Name: MyAppBuild
-#              ActionTypeId:
-#                Category: Deploy
-#                Owner: AWS
-#                Version: 1
-#                Provider: CloudFormation
-#              Configuration:
-#                ActionMode : CHANGE_SET_EXECUTE
-#                RoleArn : !GetAtt CloudFormationServiceRole.Arn
-#                Capabilities : CAPABILITY_IAM
-#                ChangeSetName : !Sub ${AWS::StackName}-sl-changeset
-#                StackName: !Sub ${AWS::StackName}-sl
-#              RunOrder: 2
+#          -
+#            Name: CreateVPC
+#            InputArtifacts:
+#              -
+#                Name: MyAppBuild
+#            ActionTypeId:
+#              Category: Deploy
+#              Owner: AWS
+#              Version: 1
+#              Provider: CloudFormation
+#            Configuration:
+#              ActionMode: REPLACE_ON_FAILURE
+#              RoleArn: !GetAtt CloudFormationServiceRole.Arn
+#              Capabilities: CAPABILITY_IAM
+#              StackName: !Sub ${AWS::StackName}-vpc-ec2
+#              TemplateConfiguration: MyAppBuild::cd/cf-vpc-dev-configs.json
+#              TemplatePath: MyAppBuild::cd/cf-vpc.yaml
+#              ParameterOverrides: !Sub |
+#                {
+#                  "KeyName" : "${KeyName}"
+#                }
+#            RunOrder: 1
+#          -
+#            Name: CreateService
+#            InputArtifacts:
+#              -
+#                Name: MyAppBuild
+#            ActionTypeId:
+#              Category: Deploy
+#              Owner: AWS
+#              Version: 1
+#              Provider: CloudFormation
+#            Configuration:
+#              ActionMode: REPLACE_ON_FAILURE
+#              RoleArn: !GetAtt CloudFormationServiceRole.Arn
+#              Capabilities: CAPABILITY_IAM
+#              StackName: !Sub ${AWS::StackName}-ec2
+#              TemplateConfiguration: MyAppBuild::cd/cf-ec2-dev-configs.json
+#              TemplatePath: MyAppBuild::cd/cf-ec2.yaml
+#              ParameterOverrides: !Sub |
+#                {
+#                  "ArtifactsBucketName": {
+#                    "Fn::GetArtifactAtt": [
+#                      "MyAppBuild",
+#                      "BucketName"
+#                    ]
+#                  },
+#                  "ArtifactObjectKey": {
+#                    "Fn::GetArtifactAtt": [
+#                      "MyAppBuild",
+#                      "ObjectKey"
+#                    ]
+#                  },
+#                  "InfraStackName": "${AWS::StackName}-vpc-ec2",
+#                  "AlarmEmail": "${NotificationEmail}",
+#                  "KeyName" : "${KeyName}",
+#                  "SecretName" : "${YourSecretName}"
+#                }
+#            RunOrder: 2
 #        -
 #          Name: Delete
 #          Actions:
@@ -261,7 +280,7 @@ Resources:
 #              Configuration:
 #                NotificationArn: !Ref SNSTopic
 #                CustomData: !Sub >
-#                  Do you want to delete the resources created by CF stack: ${AWS::StackName}-sl ?
+#                  Do you want to delete the resources created by CF stacks: ${AWS::StackName}-vpc-ec2 and ${AWS::StackName}-ec2 ?
 #              RunOrder: 1
 #            -
 #              Name: DeleteService
@@ -271,11 +290,22 @@ Resources:
 #                Version: 1
 #                Provider: CloudFormation
 #              Configuration:
-#                StackName: !Sub ${AWS::StackName}-sl
-#                ActionMode : DELETE_ONLY
-#                RoleArn : !GetAtt CloudFormationServiceRole.Arn
+#                StackName: !Sub ${AWS::StackName}-ec2
+#                ActionMode: DELETE_ONLY
+#                RoleArn: !GetAtt CloudFormationServiceRole.Arn
 #              RunOrder: 2
-
+#            -
+#              Name: DeleteVPC
+#              ActionTypeId:
+#                Category: Deploy
+#                Owner: AWS
+#                Version: 1
+#                Provider: CloudFormation
+#              Configuration:
+#                StackName: !Sub ${AWS::StackName}-vpc-ec2
+#                ActionMode: DELETE_ONLY
+#                RoleArn: !GetAtt CloudFormationServiceRole.Arn
+#              RunOrder: 3
       ArtifactStore:
         Type: S3
         Location:
@@ -345,3 +375,10 @@ Resources:
 Outputs:
   EncryptedSecret:
     Value: !GetAtt EncryptedSecret.CipherText
+  EcrRepoUrl:
+    Description: ECS repo URL
+    Value: !Sub
+      - '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepoName}'
+      - { 'EcrRepoName': !Ref EcrRepo}
+    Export:
+      Name: !Join [ '-', [ !Ref 'AWS::StackName', 'EcrRepoUrl' ] ]
