@@ -79,8 +79,8 @@ Resources:
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/python:2.7.12
-        PrivilegedMode: False
+        Image: aws/codebuild/docker:17.09.0
+        PrivilegedMode: True
         # add this for serverless part in buildspec.yaml
         EnvironmentVariables:
           - Name: ARTIFACTS_BUCKET_NAME
