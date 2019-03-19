@@ -35,10 +35,11 @@ phases:
 
 artifacts:
   files:
-    # for ec2
-    - dist/aws-cicd-0.1.0.tar.gz
+    # infra.
     - cd/cf-vpc.yaml
     - cd/cf-vpc-dev-configs.json
+    # for ec2
+    - dist/aws-cicd-0.1.0.tar.gz
     - cd/cf-ec2.yaml
     - cd/cf-ec2-dev-configs.json
     # for api gateway
@@ -47,4 +48,7 @@ artifacts:
     - dist/api_home-0.1.0.zip
     - dist/api_healthcheck-0.1.0.zip
     - cd/packaged-cf-sl.yaml
+    # for ecs
+    - cd/cf-ecs.yaml
+    - cd/cf-ecs-dev-configs.json
 
