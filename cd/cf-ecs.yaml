@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: A very simple RESTful API service based on ALB with EC2 service and CloudWatch monitorings
+Description: A very simple RESTful API service based on ALB with ECS on Fargate and CloudWatch monitorings
 Parameters:
   InfraStackName:
     Description: CF Infra. stack name
