@@ -1,0 +1,347 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: CodePipeline for CI/CD with API gateway hands on
+Parameters:
+  GitHubUserName:
+    Description: Your GitHub user name
+    Type: String
+  GitHubRepoName:
+    Description: Your GitHub repository name
+    Type: String
+    Default: aws-cicd
+  GitHubBranchName:
+    Description: Your GitHub branch name
+    Type: String
+    Default: master
+  GitHubOAuthToken:
+    Description: Your OAuth token for access GitHub
+    Type: String
+    NoEcho: True
+  NotificationEmail:
+    Description: Your email address
+    Type: String
+  AritifactsBucketName:
+    Description: 'DO NOT CHANGE: A S3 bucke name for storing codepipelines related arfiacts'
+    Type: String
+    Default: aws-cicd-public
+  KMSEncryptionFunctionObjectKey:
+    Description: 'DO NOT CHANGE: Object key for KMS Encryption function'
+    Type: String
+    Default: kms_encryption.zip
+  YourSecretName:
+    Description: A parameter name used in SSM parameter store
+    Type: String
+    Default: mysecret
+  GiveMeYourSecret:
+    Description: A secret you wanna tell me ;)
+    Type: String
+    NoEcho: True
+    Default: mysecretonaws
+  PollForSourceChanges:
+    Description: Whether to trigger build if source changed
+    Type: String
+    AllowedPattern: 'True|False'
+    Default: 'True'
+Conditions:
+  PollForSourceChanges: !Equals [!Ref PollForSourceChanges, 'True']
+
+Mappings:
+  EcsAmi:
+    us-east-1:
+      AMI: ami-8c1be5f6
+    us-west-2:
+      AMI: ami-e689729e
+
+Resources:
+  EcrRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub ${AWS::StackName}-repo
+
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess #TODO need to decrease IAM scope
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    DependsOn:
+      - CodeBuildServiceRole
+      - ArtifactStoreBucket
+      - EcrRepo
+    Properties:
+      Name: !Sub ${AWS::StackName}-codebuild
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/docker:17.09.0
+        PrivilegedMode: True
+        EnvironmentVariables:
+          - Name: ARTIFACTS_BUCKET_NAME
+            Value: !Ref ArtifactStoreBucket
+          - Name: ARTIFACTS_OBJECT_KEY
+            Value: 'api'
+          - Name: ECR_REPO_URL
+            Value: !Sub
+                - '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepoName}'
+                - { 'EcrRepoName': !Ref EcrRepo}
+      Source:
+        Type: CODEPIPELINE
+      TimeoutInMinutes: 10
+
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess #TODO need to decrease IAM scope
+
+  CloudFormationServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess #TODO need to decrease IAM scope
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        -
+          Endpoint: !Ref NotificationEmail
+          Protocol: email
+      DisplayName: !Sub ${AWS::StackName}-Topic
+
+  ArtifactStoreBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-cicd-test
+      VersioningConfiguration:
+        Status: Enabled
+      AccessControl: BucketOwnerFullControl
+
+  CodePipelineProject:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+      - CodePipelineServiceRole
+      - CodeBuildProject
+      - CloudFormationServiceRole
+      - ArtifactStoreBucket
+    Properties:
+      Name: !Sub ${AWS::StackName}-codepipeline
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages:
+        -
+          Name: Source
+          Actions:
+            -
+              Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              OutputArtifacts:
+                -
+                  Name: MyApp
+              Configuration:
+                Owner: !Ref GitHubUserName
+                Repo: !Ref GitHubRepoName
+                PollForSourceChanges: !If [PollForSourceChanges, True, False]
+                Branch: !Ref GitHubBranchName
+                OAuthToken: !Ref GitHubOAuthToken
+              RunOrder: 1
+        -
+          Name: Build
+          Actions:
+            -
+              Name: CodeBuild
+              InputArtifacts:
+                -
+                  Name: MyApp
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              OutputArtifacts:
+                -
+                  Name: MyAppBuild
+              RunOrder: 1
+#        -
+#          Name: Deploy
+#          Actions:
+#            -
+#              Name: CreateChangeSet
+#              InputArtifacts:
+#                -
+#                  Name: MyAppBuild
+#              ActionTypeId:
+#                Category: Deploy
+#                Owner: AWS
+#                Version: 1
+#                Provider: CloudFormation
+#              Configuration:
+#                ActionMode : CHANGE_SET_REPLACE
+#                RoleArn : !GetAtt CloudFormationServiceRole.Arn
+#                Capabilities : CAPABILITY_IAM
+#                ChangeSetName : !Sub ${AWS::StackName}-sl-changeset
+#                StackName: !Sub ${AWS::StackName}-sl
+#                TemplatePath : MyAppBuild::cd/packaged-cf-sl.yaml
+#                ParameterOverrides: !Sub |
+#                  {
+#                    "AlarmEmail": "${NotificationEmail}",
+#                    "SecretName" : "${YourSecretName}"
+#                  }
+#              RunOrder: 1
+#            -
+#              Name: ExecuteChangeSet
+#              InputArtifacts:
+#                -
+#                  Name: MyAppBuild
+#              ActionTypeId:
+#                Category: Deploy
+#                Owner: AWS
+#                Version: 1
+#                Provider: CloudFormation
+#              Configuration:
+#                ActionMode : CHANGE_SET_EXECUTE
+#                RoleArn : !GetAtt CloudFormationServiceRole.Arn
+#                Capabilities : CAPABILITY_IAM
+#                ChangeSetName : !Sub ${AWS::StackName}-sl-changeset
+#                StackName: !Sub ${AWS::StackName}-sl
+#              RunOrder: 2
+#        -
+#          Name: Delete
+#          Actions:
+#            -
+#              Name: ApproveForDeletion
+#              ActionTypeId:
+#                Category: Approval
+#                Owner: AWS
+#                Version: 1
+#                Provider: Manual
+#              Configuration:
+#                NotificationArn: !Ref SNSTopic
+#                CustomData: !Sub >
+#                  Do you want to delete the resources created by CF stack: ${AWS::StackName}-sl ?
+#              RunOrder: 1
+#            -
+#              Name: DeleteService
+#              ActionTypeId:
+#                Category: Deploy
+#                Owner: AWS
+#                Version: 1
+#                Provider: CloudFormation
+#              Configuration:
+#                StackName: !Sub ${AWS::StackName}-sl
+#                ActionMode : DELETE_ONLY
+#                RoleArn : !GetAtt CloudFormationServiceRole.Arn
+#              RunOrder: 2
+
+      ArtifactStore:
+        Type: S3
+        Location:
+          Ref: ArtifactStoreBucket
+
+  MyKMSKey:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: "KMS key used in Pipeline"
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: "MyKMSKey"
+        Statement:
+          -
+            Sid: "Allow administration of the key"
+            Effect: "Allow"
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: "kms:*"
+            Resource: "*"
+
+  KeyAlias:
+    Type: AWS::KMS::Alias
+    DependsOn: MyKMSKey
+    Properties:
+      AliasName: !Sub 'alias/${AWS::StackName}-MyKMSKey'
+      TargetKeyId: !Ref MyKMSKey
+
+  KMSEncryptionFunction:
+    Type: AWS::Serverless::Function
+    DependsOn: MyKMSKey
+    Properties:
+      Handler: main.handler
+      Runtime: python2.7
+      CodeUri:
+        Bucket: !Ref AritifactsBucketName
+        Key: !Ref KMSEncryptionFunctionObjectKey
+      Timeout: 120
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'kms:Encrypt'
+              Resource: !GetAtt MyKMSKey.Arn
+      Tags:
+        Name: !Sub ${AWS::StackName}-lambda-kms-encryption
+
+  EncryptedSecret:
+    Type: Custom::EncryptedSecret
+    DependsOn: KMSEncryptionFunction
+    Properties:
+      ServiceToken: !GetAtt KMSEncryptionFunction.Arn
+      KeyId: !Ref MyKMSKey
+      PlainText: !Ref GiveMeYourSecret
+
+  SecretParameter:
+    Type: AWS::SSM::Parameter
+    DependsOn: EncryptedSecret
+    Properties:
+      Name: !Ref YourSecretName
+      Type: String
+      Value: !GetAtt EncryptedSecret.CipherText
+      Description: A secret given by user
+
+Outputs:
+  EncryptedSecret:
+    Value: !GetAtt EncryptedSecret.CipherText
