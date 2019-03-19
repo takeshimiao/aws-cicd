@@ -1,7 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: CodePipeline for CI/CD with API gateway hands on
+Description: CodePipeline for CI/CD with ECS on Fargate hands on
 Parameters:
+  KeyName:
+    Description: Your SSH key for EC2
+    Type: String
   GitHubUserName:
     Description: Your GitHub user name
     Type: String
@@ -44,13 +47,6 @@ Parameters:
     Default: 'True'
 Conditions:
   PollForSourceChanges: !Equals [!Ref PollForSourceChanges, 'True']
-
-Mappings:
-  EcsAmi:
-    us-east-1:
-      AMI: ami-8c1be5f6
-    us-west-2:
-      AMI: ami-e689729e
 
 Resources:
   EcrRepo:
@@ -102,6 +98,7 @@ Resources:
                 - { 'EcrRepoName': !Ref EcrRepo}
       Source:
         Type: CODEPIPELINE
+        BuildSpec: buildspec-ecs.yaml
       TimeoutInMinutes: 10
 
   CodePipelineServiceRole:
@@ -162,6 +159,7 @@ Resources:
       - CodeBuildProject
       - CloudFormationServiceRole
       - ArtifactStoreBucket
+      - EcrRepo
     Properties:
       Name: !Sub ${AWS::StackName}-codepipeline
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
@@ -257,22 +255,19 @@ Resources:
                       "EcrRepoUrl" : "${EcrRepoUrl}"
                     }
                   - EcrRepoUrl:
-                    Fn::Join: [
-                      '/', [
-                        !Join [
-                          '.', [
-                            Ref: 'AWS::AccountId',
-                            'dkr.ecr',
-                            Ref: 'AWS::Region',
-                            'amazonaws.com'
-                          ]
-                        ],
-                        !Ref EcrRepo
+                      Fn::Join: [
+                        '/', [
+                          !Join [
+                            '.', [
+                              Ref: 'AWS::AccountId',
+                              'dkr.ecr',
+                              Ref: 'AWS::Region',
+                              'amazonaws.com'
+                            ]
+                          ],
+                          !Ref EcrRepo
+                        ]
                       ]
-                    ]
-#              Value: !Sub
-#              - '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepoName}'
-#              - { 'EcrRepoName': !Ref EcrRepo}
             RunOrder: 2
         -
           Name: Delete
@@ -287,7 +282,7 @@ Resources:
               Configuration:
                 NotificationArn: !Ref SNSTopic
                 CustomData: !Sub >
-                  Do you want to delete the resources created by CF stacks: ${AWS::StackName}-vpc-ec2 and ${AWS::StackName}-ec2 ?
+                  Do you want to delete the resources created by CF stacks: ${AWS::StackName}-vpc-ecs and ${AWS::StackName}-ecs ?
               RunOrder: 1
             -
               Name: DeleteService

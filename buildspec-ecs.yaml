@@ -1,0 +1,38 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo run install on `date`
+      - apt-get update
+      - apt-get install -y zip
+  pre_build:
+    commands:
+      - echo run unittests on `date`
+      - make test
+      # output all env vars
+      #- printenv
+  build:
+    commands:
+      - echo Build started on `date`
+      - make LIBS='bottle' LIB_DIR="$PWD/build/lib.linux-x86_64-2.7" build dist
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      # for dcoker image
+      # push to ecr
+      - $(aws ecr get-login --no-include-email)
+      - docker tag aws-cicd:0.1.0 $ECR_REPO_URL:0.1.0
+      - docker push $ECR_REPO_URL:0.1.0
+      - docker tag aws-cicd:latest $ECR_REPO_URL:latest
+      - docker push $ECR_REPO_URL:latest
+
+artifacts:
+  files:
+    # infra.
+    - cd/cf-vpc.yaml
+    - cd/cf-vpc-dev-configs.json
+    # for ecs
+    - cd/cf-ecs.yaml
+    - cd/cf-ecs-dev-configs.json
+

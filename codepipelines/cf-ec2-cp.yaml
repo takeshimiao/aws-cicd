@@ -48,13 +48,6 @@ Parameters:
 Conditions:
   PollForSourceChanges: !Equals [!Ref PollForSourceChanges, 'True']
 
-Mappings:
-  EcsAmi:
-    us-east-1:
-      AMI: ami-8c1be5f6
-    us-west-2:
-      AMI: ami-e689729e
-
 Resources:
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
@@ -96,6 +89,7 @@ Resources:
             Value: 'api'
       Source:
         Type: CODEPIPELINE
+        BuildSpec: buildspec-ec2.yaml
       TimeoutInMinutes: 10
 
   CodePipelineServiceRole:
