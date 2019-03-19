@@ -35,13 +35,13 @@ distclean: clean
 build:
 	python setup.py build
 	bash build.sh $(PYTHON_CMD) $(LIB_DIR) $(LIBS)
-	cd lambdas/; make build; cd ..
+	cd lambdas/; make SRC_LIB_DIR=$(LIB_DIR) build; cd ..
 
 .PHONY: dist
 dist:
 	python setup.py sdist
 	cp lambdas/dist/* $(ARTIFACTS_DIR)/
-	pushd docker; sh build.sh; popd
+	cd docker; sh build.sh; cd -
 
 .PHONY: test
 test:

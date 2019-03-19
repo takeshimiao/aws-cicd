@@ -25,7 +25,7 @@ distclean:
 .PHONY: dist
 dist:
 	mkdir $(ARTIFACTS_DIR)
-	pushd kms_encryption/; zip -r kms_encryption.zip ./*; mv *.zip $(ARTIFACTS_DIR)/; popd
+	cd kms_encryption/; zip -r kms_encryption.zip ./*; mv *.zip $(ARTIFACTS_DIR)/; cd -
 
 .PHONY: test
 test:

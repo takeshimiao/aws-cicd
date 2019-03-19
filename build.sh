@@ -20,15 +20,15 @@ lib_dir="$1"
 shift
 
 
-py_install_dir="$($python_cmd setup.py develop | egrep 'site-packages' | tail -1 | awk '{print $2}')"
-[ $? -ne 0 ] && echo "Parsing python site-packages dir failed !" && exit 1
-if [[ ! $py_install_dir =~ site-packages$ ]]; then
+py_install_dir="$($python_cmd setup.py develop | egrep '[a-z]+-packages' | tail -1 | awk '{print $2}')"
+[ $? -ne 0 ] && echo "Parsing python dist-packages dir failed !" && exit 1
+if [[ ! $py_install_dir =~ [a-z]+-packages$ ]]; then
     py_install_dir="$(dirname $py_install_dir)"
 fi
 
 declare -i num_dir=$(echo "$py_install_dir" | wc -l)
 if [ $num_dir -ne 1 ]; then
-    echo "Parsed python site-packages dir:$py_install_dir failed !"
+    echo "Parsed python dist-packages dir:$py_install_dir failed !"
     exit 1
 fi
 
