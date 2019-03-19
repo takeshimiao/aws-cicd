@@ -205,107 +205,114 @@ Resources:
                 -
                   Name: MyAppBuild
               RunOrder: 1
-#        -
-#          Name: Deploy
-#          Actions:
-#          -
-#            Name: CreateVPC
-#            InputArtifacts:
-#              -
-#                Name: MyAppBuild
-#            ActionTypeId:
-#              Category: Deploy
-#              Owner: AWS
-#              Version: 1
-#              Provider: CloudFormation
-#            Configuration:
-#              ActionMode: REPLACE_ON_FAILURE
-#              RoleArn: !GetAtt CloudFormationServiceRole.Arn
-#              Capabilities: CAPABILITY_IAM
-#              StackName: !Sub ${AWS::StackName}-vpc-ec2
-#              TemplateConfiguration: MyAppBuild::cd/cf-vpc-dev-configs.json
-#              TemplatePath: MyAppBuild::cd/cf-vpc.yaml
-#              ParameterOverrides: !Sub |
-#                {
-#                  "KeyName" : "${KeyName}"
-#                }
-#            RunOrder: 1
-#          -
-#            Name: CreateService
-#            InputArtifacts:
-#              -
-#                Name: MyAppBuild
-#            ActionTypeId:
-#              Category: Deploy
-#              Owner: AWS
-#              Version: 1
-#              Provider: CloudFormation
-#            Configuration:
-#              ActionMode: REPLACE_ON_FAILURE
-#              RoleArn: !GetAtt CloudFormationServiceRole.Arn
-#              Capabilities: CAPABILITY_IAM
-#              StackName: !Sub ${AWS::StackName}-ec2
-#              TemplateConfiguration: MyAppBuild::cd/cf-ec2-dev-configs.json
-#              TemplatePath: MyAppBuild::cd/cf-ec2.yaml
-#              ParameterOverrides: !Sub |
-#                {
-#                  "ArtifactsBucketName": {
-#                    "Fn::GetArtifactAtt": [
-#                      "MyAppBuild",
-#                      "BucketName"
-#                    ]
-#                  },
-#                  "ArtifactObjectKey": {
-#                    "Fn::GetArtifactAtt": [
-#                      "MyAppBuild",
-#                      "ObjectKey"
-#                    ]
-#                  },
-#                  "InfraStackName": "${AWS::StackName}-vpc-ec2",
-#                  "AlarmEmail": "${NotificationEmail}",
-#                  "KeyName" : "${KeyName}",
-#                  "SecretName" : "${YourSecretName}"
-#                }
-#            RunOrder: 2
-#        -
-#          Name: Delete
-#          Actions:
-#            -
-#              Name: ApproveForDeletion
-#              ActionTypeId:
-#                Category: Approval
-#                Owner: AWS
-#                Version: 1
-#                Provider: Manual
-#              Configuration:
-#                NotificationArn: !Ref SNSTopic
-#                CustomData: !Sub >
-#                  Do you want to delete the resources created by CF stacks: ${AWS::StackName}-vpc-ec2 and ${AWS::StackName}-ec2 ?
-#              RunOrder: 1
-#            -
-#              Name: DeleteService
-#              ActionTypeId:
-#                Category: Deploy
-#                Owner: AWS
-#                Version: 1
-#                Provider: CloudFormation
-#              Configuration:
-#                StackName: !Sub ${AWS::StackName}-ec2
-#                ActionMode: DELETE_ONLY
-#                RoleArn: !GetAtt CloudFormationServiceRole.Arn
-#              RunOrder: 2
-#            -
-#              Name: DeleteVPC
-#              ActionTypeId:
-#                Category: Deploy
-#                Owner: AWS
-#                Version: 1
-#                Provider: CloudFormation
-#              Configuration:
-#                StackName: !Sub ${AWS::StackName}-vpc-ec2
-#                ActionMode: DELETE_ONLY
-#                RoleArn: !GetAtt CloudFormationServiceRole.Arn
-#              RunOrder: 3
+        -
+          Name: Deploy
+          Actions:
+          -
+            Name: CreateVPC
+            InputArtifacts:
+              -
+                Name: MyAppBuild
+            ActionTypeId:
+              Category: Deploy
+              Owner: AWS
+              Version: 1
+              Provider: CloudFormation
+            Configuration:
+              ActionMode: REPLACE_ON_FAILURE
+              RoleArn: !GetAtt CloudFormationServiceRole.Arn
+              Capabilities: CAPABILITY_IAM
+              StackName: !Sub ${AWS::StackName}-vpc-ecs
+              TemplateConfiguration: MyAppBuild::cd/cf-vpc-dev-configs.json
+              TemplatePath: MyAppBuild::cd/cf-vpc.yaml
+              ParameterOverrides: !Sub |
+                {
+                  "KeyName" : "${KeyName}"
+                }
+            RunOrder: 1
+          -
+            Name: CreateService
+            InputArtifacts:
+              -
+                Name: MyAppBuild
+            ActionTypeId:
+              Category: Deploy
+              Owner: AWS
+              Version: 1
+              Provider: CloudFormation
+            Configuration:
+              ActionMode: REPLACE_ON_FAILURE
+              RoleArn: !GetAtt CloudFormationServiceRole.Arn
+              Capabilities: CAPABILITY_IAM
+              StackName: !Sub ${AWS::StackName}-ecs
+              TemplateConfiguration: MyAppBuild::cd/cf-ecs-dev-configs.json
+              TemplatePath: MyAppBuild::cd/cf-ecs.yaml
+              ParameterOverrides:
+                Fn::Sub:
+                  - |
+                    {
+                      "InfraStackName": "${AWS::StackName}-vpc-ecs",
+                      "AlarmEmail": "${NotificationEmail}",
+                      "SecretName": "${YourSecretName}",
+                      "EcrRepoUrl" : "${EcrRepoUrl}"
+                    }
+                  - EcrRepoUrl:
+                    Fn::Join: [
+                      '/', [
+                        !Join [
+                          '.', [
+                            Ref: 'AWS::AccountId',
+                            'dkr.ecr',
+                            Ref: 'AWS::Region',
+                            'amazonaws.com'
+                          ]
+                        ],
+                        !Ref EcrRepo
+                      ]
+                    ]
+#              Value: !Sub
+#              - '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepoName}'
+#              - { 'EcrRepoName': !Ref EcrRepo}
+            RunOrder: 2
+        -
+          Name: Delete
+          Actions:
+            -
+              Name: ApproveForDeletion
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Version: 1
+                Provider: Manual
+              Configuration:
+                NotificationArn: !Ref SNSTopic
+                CustomData: !Sub >
+                  Do you want to delete the resources created by CF stacks: ${AWS::StackName}-vpc-ec2 and ${AWS::StackName}-ec2 ?
+              RunOrder: 1
+            -
+              Name: DeleteService
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                StackName: !Sub ${AWS::StackName}-ecs
+                ActionMode: DELETE_ONLY
+                RoleArn: !GetAtt CloudFormationServiceRole.Arn
+              RunOrder: 2
+            -
+              Name: DeleteVPC
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                StackName: !Sub ${AWS::StackName}-vpc-ecs
+                ActionMode: DELETE_ONLY
+                RoleArn: !GetAtt CloudFormationServiceRole.Arn
+              RunOrder: 3
       ArtifactStore:
         Type: S3
         Location:
