@@ -17,6 +17,12 @@ Materials for AWS CICD workshop
     * [2. AWS CodePipline should automatically trigger a build at first place](#2-aws-codepipline-should-automatically-trigger-a-build-at-first-place-1)
     * [3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline-1)
     * [4. Take a look at our RESTful API service](#4-take-a-look-at-our-restful-api-service-1)
+  * [CI/CD with ECS + Fargate on AWS](#cicd-with-ecs--fargate-on-aws)
+    * [0. Overview](#0-overview-2)
+    * [1. Launch AWS CodePipeline](#1-launch-aws-codepipeline-2)
+    * [2. AWS CodePipline should automatically trigger a build at first place](#2-aws-codepipline-should-automatically-trigger-a-build-at-first-place-2)
+    * [3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline-2)
+    * [4. Take a look at our RESTful API service](#4-take-a-look-at-our-restful-api-service-2)
   * [Delete hands-on resources](#delete-hands-on-resources)
 * [Tips](#tips)
   * [Sync your forked git repo](#sync-your-forked-git-repo)
@@ -30,6 +36,10 @@ Here are the slides I used in the workshop
   * CI/CD for Serverless and Containerized Applications (DEV309-R1) - AWS re:Invent 2018
     * [slides](https://www.slideshare.net/AmazonWebServices/cicd-for-serverless-and-containerized-applications-dev309r1-aws-reinvent-2018)
     * [Video](https://www.youtube.com/watch?v=01ewawuL-IY)
+# References
+  * https://github.com/awslabs/aws-cloudformation-templates
+    * A good Cloudformation examples git repo maintained by AWS
+    * I rely on AWS CLoudformation heavily in the following handsons for building CD 
 
 # Prerequisites
 [Back to top](#content)
@@ -258,7 +268,7 @@ The components are
 ### 1. Launch AWS CodePipeline
 [Back to top](#content)
 
-Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ec2-cp.yaml](codepipelines/cf-ec2-cp.yaml)) in your AWS account.
+Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-sl-cp.yaml](codepipelines/cf-sl-cp.yaml)) in your AWS account.
 
 <a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://s3.amazonaws.com/aws-cicd-public/cf-sl-cp.yaml" target="_blank" rel="noopener"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
 
@@ -270,7 +280,7 @@ Pls go to [hands-on#1-1. Launch AWS CodePipeline](#1-launch-aws-codepipeline) fo
 You can see the CodePipline project starts to trigger a build automatically in few minutes. Due to the CodePipeline will pull repo at first time.
 
 
-After the service provisioning gets to `CREATE_COMPLETED`, you can get the endpoint FQDN at the row APIGatewayURL at Output tab in AWS CloudFormation console. let's veirfy your build whether successfully !
+After the service provisioning gets to `CREATE_COMPLETED`, you can get the endpoint FQDN at the row APIGatewayURL in Output tab of AWS CloudFormation console. let's verify your build whether run successfully !
 
 ```bash
 curl <APIGatewayURL>
@@ -296,7 +306,6 @@ We are using CloudFormation W/ serverless application model(SAM) to deploy our o
 
 We basically don't need to care about the operations and scaling related issues for underlying resources due to AWS serverless architecture is taking about them for us. But the world is not perfect, there are still some issues we need to care about...for example, cold start issue, etc. Pls refer to [slides](https://www.slideshare.net/takeshi_miao/my-thoughts-for-building-cicd-pipelines-for-serverless-applications-sharing),p#5 for details
 
-
 #### 4.1 healthcheck API
 
 ```bash
@@ -311,6 +320,8 @@ This API originally used by ALB + EC2 architecture, it is useless for serverless
 We are using SAM to deploy/update our API gateway and Lambda function resources, but there is actually a drawback for SAM model...which is...it replaces our underlying API gateway deployment and/or Lambda functions in place (depends on what resource you changed). It will impact our API availability in a very short of time, so you need to consider this issue whether break your SLA. Pls refer to [slides](https://www.slideshare.net/takeshi_miao/my-thoughts-for-building-cicd-pipelines-for-serverless-applications-sharing),p#4 for more details.
 
 Take a look on [cd/cf-sl.yaml](cd/cf-sl.yaml) for more details.
+
+**UPDATE-20190320**:  Now API gateway supports [Canary deployment](https://docs.aws.amazon.com/apigateway/latest/developerguide/canary-release.html) to avoid previous issue. Although I still NOT implement in this handson yet, according to my experiences, I recommend you can use the [SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/automating-updates-to-serverless-apps.html) to implement the CD.
 
 #### 4.3 sleep API
 Pls go to [hands-on#1-4.4 sleep API](#44-sleep-api) for reference.
@@ -330,6 +341,73 @@ This error will trigger an alarm and also will shown in dashboard. I created a c
 
 Pls go to [hands-on#1-4.5 secret API](#45-secret-api) for reference.
 
+## CI/CD with ECS + Fargate on AWS
+[Back to top](#content)
+
+### 0. Overview
+
+![CI/CD with ECS + Fargate on AWS](images/hands-on_03_cicd-w-ecs_v01.PNG)
+
+We use AWS CodePipeline to pull commits from GitHub, build, test and deploy an API service built on top *AWS ECS* and *Fargate* services, in AWS region us-east-1.
+
+The components are
+* Two API servers
+  * Running in *Docker containers* managed by *AWS ECS* and *Fargate* services
+* CloudWatch Alarm
+* SNS Topic for alarm mail
+* CloudWatch dashboard
+
+Where
+* [*Docker container*](https://www.docker.com/community/open-source)
+  * is a computer program that performs operating-system-level virtualization.
+* [*AWS ECS* (Amazon Elastic Container Service)](https://aws.amazon.com/ecs/?sc_channel=PS&sc_campaign=acquisition_TW&sc_publisher=google&sc_medium=ACQ-P%7CPS-GO%7CBrand%7CDesktop%7CSU%7CCompute%7CECS%7CTW%7CEN%7CText&sc_content=ecs_general_e&sc_detail=aws%20ecs&sc_category=Compute&sc_segment=293607635667&sc_matchtype=e&sc_country=TW&s_kwcid=AL!4422!3!293607635667!e!!g!!aws%20ecs&ef_id=EAIaIQobChMIvMapr-yQ4QIVibaWCh3tFQEWEAAYASAAEgLtnPD_BwE:G:s)
+  * is a highly scalable, high-performance container orchestration service that supports Docker containers
+* [*AWS Fargate*](https://aws.amazon.com/fargate/?nc1=h_ls)
+  * is a compute engine for Amazon ECS that allows you to run containers without having to manage servers or clusters.
+ 
+### 1. Launch AWS CodePipeline
+[Back to top](#content)
+
+Click following icon to provision AWS CodePipline via AWS CloudFormation ([cf-ecs-cp.yaml](codepipelines/cf-ecs-cp.yaml)) in your AWS account.
+
+<a href="https://console.aws.amazon.com/cloudformation/home?#/stacks/new?&templateURL=https://s3.amazonaws.com/aws-cicd-public/cf-ecs-cp.yaml" target="_blank" rel="noopener"><img src="https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png"></a>
+
+Pls go to [hands-on#1-1. Launch AWS CodePipeline](#1-launch-aws-codepipeline) for reference
+
+### 2. AWS CodePipline should automatically trigger a build at first place
+[Back to top](#content)
+
+You can see the CodePipline project starts to trigger a build automatically in few minutes. Due to the CodePipeline will pull repo at first time.
+
+
+After the service provisioning gets to `CREATE_COMPLETED`, you can get the endpoint FQDN at the row ALBDNSName in Output tab of AWS CloudFormation console. let's verify your build whether run successfully !
+
+```bash
+curl http://<ALBDNSName>
+Welcome to my home
+```
+
+The very simple API impl. is [api/main.py](api/main.py) and running in Docker container (instructions written in a [Dockerifle](docker/Dockerfile)), you can take a look if interested in. 
+
+### 3. Take a look at every component in the overall CodePipeline
+[Back to top](#content)
+
+You can see more details in [cf-ecs-cp.yaml](codepipelines/cf-ecs-cp.yaml)
+
+Pls go to [hands-on#1-3. Take a look at every component in the overall CodePipeline](#3-take-a-look-at-every-component-in-the-overall-codepipeline) for reference.
+
+### 4. Take a look at our RESTful API service
+[Back to top](#content)
+
+The very simple API impl. is [api/main.py](api/main.py) and running in Docker container (instructions written in a [Dockerifle](docker/Dockerfile)), you can take a look if interested in.
+
+For example APIs pls simply refer to [hands-on#1-4. Take a look at our RESTful API service](#4-take-a-look-at-our-restful-api-service)
+
+#### 4.1 What will happen if we want to update/deploy our new codes to existing service ?
+
+For deploying new Docker containers to ECS, basically it provides [two strategies](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-types.html), 1) Rolling update and 2) Blue/Green deployment. But I still NOT confirm its behaviour yet in this handson, pls do your efforts and share me the answers you got ;)
+
+
 ## Delete hands-on resources
 [Back to top](#content)
 
@@ -345,9 +423,15 @@ Approve this action will keep to delete CloudFormation stacks
 
 Go to [S3 console](https://s3.console.aws.amazon.com/s3/home?region=us-east-1) and delete bucket: `*-cicd-test`
 
-3. Delete CodePipeline CloudFormation stack
+3. Delete ECR repository (optional)
 
-Go to [CloudFormation console](https://console.aws.amazon.com/cloudformation/home?region=us-east-1) and delete CodePipeline stack (The stack name was given by you at first place).
+If you are running handson#3, it will build a docker image and push to ECR repository. Pls delete the ECR repository before you go next step.
+
+Go to [ECR console](https://console.aws.amazon.com/ecr/repositories?region=us-east-1) and delete bucket: `*-repo`
+
+4. Delete CodePipeline CloudFormation stack
+
+Go to [CloudFormation console](https://console.aws.amazon.com/cloudformation/home?region=us-east-1) and delete CodePipeline stack (The stack name was given by you at beginning).
 
 
 # Tips
