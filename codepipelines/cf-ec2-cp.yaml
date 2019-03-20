@@ -239,6 +239,8 @@ Resources:
                 StackName : !Sub ${AWS::StackName}-ec2
                 TemplateConfiguration : MyAppBuild::cd/cf-ec2-dev-configs.json
                 TemplatePath : MyAppBuild::cd/cf-ec2.yaml
+                # There are couples special functions in cloudformation to support codepipline, e.g. Fn::GetArtifactAtt
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-parameter-override-functions.html
                 ParameterOverrides: !Sub |
                   {
                     "ArtifactsBucketName": {
