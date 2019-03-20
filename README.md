@@ -47,7 +47,7 @@ There are few things need your notices and actions in your AWS account
 There are two more things need your actions in your GitHub account
   * Fork this repo to under your GitHub account
   * Create a [valid OAuth token from GitHub](https://help.github.com/articles/creating-a-personal-access-token-for-the-command-line/), we will use it in AWS CodePipeline service. 
-<img src="images/prep_03_oauth-configs.png" width="800" height="400"/>
+![OAuth config](images/prep_03_oauth-configs.png)
 
 # Hands-on
 [Back to top](#content)
@@ -75,7 +75,7 @@ According to my experiences, whatever technology stacks you are using for buildi
 
 ### 0. Overview
 
-<img src="images/hands-on_01_cicd-w-ec2-overview_v03.PNG" width="800" height="400"/>
+![CI/CD with EC2 on AWS](images/hands-on_01_cicd-w-ec2-overview_v03.PNG)
 
 We use AWS CodePipeline to pull commits from GitHub, build, test and deploy a standalone VPC and a very simple API service running within it, in AWS region us-east-1.
 
@@ -243,7 +243,7 @@ How to decrypt the data in code
 
 ### 0. Overview
 
-<img src="images/hands-on_02_cicd-w-apiGateway_v01.PNG" width="800" height="400"/>
+![CI/CD with API gateway + Lambda functions on AWS](images/hands-on_02_cicd-w-apiGateway_v01.PNG)
 
 We use AWS CodePipeline to pull commits from GitHub, build, test and deploy an API gateway and multiple Lambda functions behind it, in AWS region us-east-1.
 
