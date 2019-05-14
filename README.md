@@ -27,19 +27,20 @@ Materials for AWS CICD workshop
 * [Tips](#tips)
   * [Sync your forked git repo](#sync-your-forked-git-repo)
 
-# Slides
-
-Here are the slides I used in the workshop
-
+# References
   * The CICD journey of SPN Infra., Coretech, Trendmico on AWS
     * [slides](https://www.slideshare.net/takeshi_miao/20171122-aws-usergrpcoretechspncicdawsv01/1)
   * CI/CD for Serverless and Containerized Applications (DEV309-R1) - AWS re:Invent 2018
+    * Good quick start for AWS CICD solutions
     * [slides](https://www.slideshare.net/AmazonWebServices/cicd-for-serverless-and-containerized-applications-dev309r1-aws-reinvent-2018)
     * [Video](https://www.youtube.com/watch?v=01ewawuL-IY)
-# References
   * https://github.com/awslabs/aws-cloudformation-templates
     * A good Cloudformation examples git repo maintained by AWS
-    * I rely on AWS CLoudformation heavily in the following handsons for building CD 
+    * I rely on AWS CLoudformation heavily in the following handsons for building CD
+  * Deep Dive into Blue/Green Deployments on AWS (DVO401) - AWS re:Invent 2015
+    * Common practices for deploy your services on AWS
+    * [slides](https://www.slideshare.net/AmazonWebServices/dvo401-deep-dive-into-bluegreen-deployments-on-aws)
+    * [Video](https://www.youtube.com/watch?v=aX54mhZbN58)
 
 # Prerequisites
 [Back to top](#content)
